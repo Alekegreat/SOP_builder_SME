@@ -1,0 +1,21 @@
+name = "sop-queue-consumer"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[[queues.consumers]]
+queue = "sop-jobs"
+max_batch_size = 5
+max_batch_timeout = 30
+max_retries = 3
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sop-builder-db"
+database_id = "YOUR_D1_DATABASE_ID"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "sop-builder-exports"
+
+[vars]
+ENVIRONMENT = "production"

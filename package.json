@@ -1,0 +1,42 @@
+{
+  "name": "sop-builder",
+  "private": true,
+  "version": "0.1.0",
+  "description": "SOP Builder — Interview-to-SOP + Versioning SaaS (Telegram Bot + TMA)",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "test:unit": "vitest run --coverage",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest watch",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "playwright test",
+    "test:security": "vitest run --config vitest.security.config.ts",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r typecheck",
+    "db:generate": "pnpm --filter @sop/worker drizzle-kit generate",
+    "db:migrate": "pnpm --filter @sop/worker wrangler d1 migrations apply sop-db",
+    "clean": "pnpm -r clean"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@playwright/test": "^1.50.1",
+    "@types/node": "^22.13.1",
+    "@typescript-eslint/eslint-plugin": "^8.22.0",
+    "@typescript-eslint/parser": "^8.22.0",
+    "@vitest/coverage-v8": "^2.1.9",
+    "eslint": "^9.18.0",
+    "miniflare": "^3.20241230.0",
+    "playwright": "^1.50.1",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

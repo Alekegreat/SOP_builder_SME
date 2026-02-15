@@ -1,0 +1,29 @@
+name = "sop-builder-worker"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sop-db"
+database_id = "YOUR_D1_DATABASE_ID"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "sop-exports"
+
+[[queues.producers]]
+binding = "QUEUE"
+queue = "sop-jobs"
+
+[vars]
+ENVIRONMENT = "production"
+
+# Secrets (set via wrangler secret put):
+# BOT_TOKEN
+# BOT_WEBHOOK_SECRET
+# JWT_SECRET
+# ENCRYPTION_KEY

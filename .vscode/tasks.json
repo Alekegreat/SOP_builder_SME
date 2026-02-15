@@ -1,0 +1,65 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "validate-typecheck",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"typecheck"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "shared-tsc",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"--filter",
+				"@sop/shared",
+				"exec",
+				"tsc",
+				"--noEmit",
+				"--pretty",
+				"false"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "validate-typecheck-2",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"typecheck"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "run-unit-tests",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"test"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "install-deps-refresh",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"install"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "run-unit-tests-2",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"test"
+			],
+			"isBackground": false
+		}
+	]
+}
