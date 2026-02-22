@@ -9,6 +9,13 @@ export const PLAN_PRICES: Record<Plan, number> = {
   BUSINESS: 99_00,
 };
 
+/** Telegram Stars pricing per plan (monthly). 1 Star ≈ $0.02 */
+export const PLAN_STARS_PRICES: Record<Exclude<Plan, 'FREE'>, number> = {
+  SOLO_PRO: 600,
+  TEAM: 2000,
+  BUSINESS: 5000,
+};
+
 // ── Entitlements matrix ──
 export interface PlanEntitlements {
   maxWorkspaces: number;
@@ -264,7 +271,7 @@ export const STALENESS_THRESHOLDS = {
 
 // ── Add-on credit packs ──
 export const CREDIT_PACKS = [
-  { id: 'credits_50', credits: 50, priceUsd: 5_00 },
-  { id: 'credits_200', credits: 200, priceUsd: 15_00 },
-  { id: 'credits_500', credits: 500, priceUsd: 30_00 },
+  { id: 'credits_50', credits: 50, priceUsd: 5_00, starsPrice: 250 },
+  { id: 'credits_200', credits: 200, priceUsd: 15_00, starsPrice: 750 },
+  { id: 'credits_500', credits: 500, priceUsd: 30_00, starsPrice: 1500 },
 ] as const;

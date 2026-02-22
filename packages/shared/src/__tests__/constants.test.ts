@@ -8,6 +8,7 @@ import {
   JWT_EXPIRY_SECONDS,
   INIT_DATA_MAX_AGE_SECONDS,
   CREDIT_PACKS,
+  PLAN_STARS_PRICES,
 } from '@sop/shared';
 
 describe('Shared Constants', () => {
@@ -93,9 +94,31 @@ describe('Shared Constants', () => {
       for (const pack of CREDIT_PACKS) {
         expect(pack).toHaveProperty('credits');
         expect(pack).toHaveProperty('priceUsd');
+        expect(pack).toHaveProperty('starsPrice');
         expect(pack.credits).toBeGreaterThan(0);
         expect(pack.priceUsd).toBeGreaterThan(0);
+        expect(pack.starsPrice).toBeGreaterThan(0);
       }
+    });
+  });
+
+  describe('PLAN_STARS_PRICES', () => {
+    it('has Stars prices for all paid plans', () => {
+      expect(PLAN_STARS_PRICES).toHaveProperty('SOLO_PRO');
+      expect(PLAN_STARS_PRICES).toHaveProperty('TEAM');
+      expect(PLAN_STARS_PRICES).toHaveProperty('BUSINESS');
+    });
+
+    it('prices are positive integers', () => {
+      for (const price of Object.values(PLAN_STARS_PRICES)) {
+        expect(price).toBeGreaterThan(0);
+        expect(Number.isInteger(price)).toBe(true);
+      }
+    });
+
+    it('higher plans cost more Stars', () => {
+      expect(PLAN_STARS_PRICES.TEAM).toBeGreaterThan(PLAN_STARS_PRICES.SOLO_PRO);
+      expect(PLAN_STARS_PRICES.BUSINESS).toBeGreaterThan(PLAN_STARS_PRICES.TEAM);
     });
   });
 });

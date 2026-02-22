@@ -1,5 +1,14 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../app.js';
+import { PLAN_STARS_PRICES, CREDIT_PACKS } from '@sop/shared';
+import type { Plan } from '@sop/shared';
+import {
+  recordPaymentEvent,
+  isPaymentProcessed,
+  resolveWorkspaceForUser,
+} from '../services/payments.js';
+import { updatePlan, addCredits } from '../services/billing.js';
+import { writeAuditLog } from '../services/audit.js';
 
 export const webhookRoute = new Hono<AppEnv>();
 
@@ -62,6 +71,12 @@ async function handleTelegramUpdate(update: TelegramUpdate, env: import('../env.
 
   if (update.callback_query) {
     await handleCallbackQuery(update.callback_query, env);
+    return;
+  }
+
+  // Handle successful Telegram Stars payment
+  if (update.message?.successful_payment) {
+    await handleSuccessfulPayment(update.message, env);
     return;
   }
 
@@ -508,12 +523,136 @@ async function handleCallbackQuery(
       chatId,
       `${decision === 'APPROVED' ? '✅' : '❌'} Approval ${decision.toLowerCase()}.`,
     );
+  } else if (data.startsWith('upgrade:')) {
+    const planId = data.split(':')[1] as Exclude<Plan, 'FREE'>;
+    const starPrice = PLAN_STARS_PRICES[planId];
+    if (!starPrice) {
+      await sendMessage(env.BOT_TOKEN, chatId, '❌ Unknown plan.');
+    } else {
+      // Resolve workspace for the invoice payload
+      const workspaceId = await resolveWorkspaceForUser(env.DB, query.from.id);
+      const payload = JSON.stringify({ workspaceId, planId });
+
+      await callTelegramApi(env.BOT_TOKEN, 'sendInvoice', {
+        chat_id: chatId,
+        title: `SOP Builder — ${planId.replace('_', ' ')} Plan`,
+        description: `Monthly subscription to the ${planId.replace('_', ' ')} plan.`,
+        payload,
+        currency: 'XTR',
+        prices: [{ label: `${planId.replace('_', ' ')} (monthly)`, amount: starPrice }],
+      });
+    }
+  } else if (data === 'credits:buy') {
+    // Show credit pack selection
+    const buttons = CREDIT_PACKS.map((p) => [
+      { text: `${p.credits} credits — ${p.starsPrice} ⭐`, callback_data: `credits:${p.id}` },
+    ]);
+    await sendMessage(env.BOT_TOKEN, chatId, '🎯 Choose a credit pack:', {
+      reply_markup: { inline_keyboard: buttons },
+    });
+  } else if (data.startsWith('credits:credits_')) {
+    const packId = data.replace('credits:', '');
+    const pack = CREDIT_PACKS.find((p) => p.id === packId);
+    if (!pack) {
+      await sendMessage(env.BOT_TOKEN, chatId, '❌ Unknown credit pack.');
+    } else {
+      const workspaceId = await resolveWorkspaceForUser(env.DB, query.from.id);
+      const payload = JSON.stringify({ workspaceId, credits: pack.credits });
+
+      await callTelegramApi(env.BOT_TOKEN, 'sendInvoice', {
+        chat_id: chatId,
+        title: `SOP Builder — ${pack.credits} AI Credits`,
+        description: `${pack.credits} AI generation credits for your workspace.`,
+        payload,
+        currency: 'XTR',
+        prices: [{ label: `${pack.credits} AI Credits`, amount: pack.starsPrice }],
+      });
+    }
   }
 
   // Answer callback query
   await callTelegramApi(env.BOT_TOKEN, 'answerCallbackQuery', {
     callback_query_id: query.id,
   });
+}
+
+/**
+ * Handle a successful Telegram Stars payment.
+ * Processes plan upgrades and credit purchases idempotently.
+ */
+async function handleSuccessfulPayment(
+  message: NonNullable<TelegramUpdate['message']>,
+  env: import('../env.js').Env,
+) {
+  const payment = message.successful_payment!;
+  const externalId = (payment as Record<string, string>).telegram_payment_charge_id;
+  if (!externalId) return;
+
+  // Idempotency
+  if (await isPaymentProcessed(env.DB, 'stars', externalId)) return;
+
+  let payloadData: { workspaceId?: string; planId?: string; credits?: number };
+  try {
+    payloadData = JSON.parse((payment as Record<string, string>).invoice_payload ?? '{}');
+  } catch {
+    payloadData = {};
+  }
+
+  const workspaceId =
+    payloadData.workspaceId ?? (await resolveWorkspaceForUser(env.DB, message.from.id));
+  if (!workspaceId) {
+    console.error('Stars payment: could not resolve workspace for user', message.from.id);
+    return;
+  }
+
+  await recordPaymentEvent(env.DB, {
+    workspaceId,
+    provider: 'stars',
+    status: 'completed',
+    externalId,
+    amount: (payment as Record<string, number>).total_amount ?? 0,
+    currency: 'XTR',
+    rawJson: { message },
+  });
+
+  if (payloadData.planId) {
+    await updatePlan(env.DB, workspaceId, payloadData.planId as Plan);
+  }
+  if (payloadData.credits) {
+    await addCredits(env.DB, workspaceId, payloadData.credits);
+  }
+
+  await writeAuditLog(env.DB, {
+    workspaceId,
+    actorUserId: 'system',
+    action: 'billing.payment_received',
+    entityType: 'payment_event',
+    entityId: externalId,
+    meta: {
+      provider: 'stars',
+      amount: (payment as Record<string, number>).total_amount,
+      planId: payloadData.planId,
+      credits: payloadData.credits,
+    },
+  });
+
+  // Notify user
+  const chatId = message.chat.id;
+  if (payloadData.planId) {
+    await sendMessage(
+      env.BOT_TOKEN,
+      chatId,
+      `✅ Payment received! Your plan has been upgraded to *${payloadData.planId.replace('_', ' ')}*.`,
+      { parse_mode: 'Markdown' },
+    );
+  } else if (payloadData.credits) {
+    await sendMessage(
+      env.BOT_TOKEN,
+      chatId,
+      `✅ Payment received! *${payloadData.credits} AI credits* added to your workspace.`,
+      { parse_mode: 'Markdown' },
+    );
+  }
 }
 
 // ── Telegram API helpers ──
