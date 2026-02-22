@@ -13,7 +13,7 @@ jobs:
     name: Deploy Pages Preview
     runs-on: ubuntu-latest
     outputs:
-      pages_url: ${{ steps.pages_deploy.outputs.deployment-url || steps.pages_deploy.outputs.url }}
+      pages_url: ${{ steps.pages_deploy.outputs.url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -33,18 +33,22 @@ jobs:
 
       - name: Deploy Pages Preview
         id: pages_deploy
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '3'
-          command: pages deploy apps/tma-web/dist --project-name=sop-builder-tma --branch=pr-${{ github.event.pull_request.number }}
+        run: |
+          OUTPUT=$(pnpm exec wrangler pages deploy apps/tma-web/dist \
+            --project-name=sop-builder-tma \
+            --branch=pr-${{ github.event.pull_request.number }} 2>&1)
+          echo "$OUTPUT"
+          URL=$(echo "$OUTPUT" | grep -oP 'https://[^\s]+\.pages\.dev' | tail -1)
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
   deploy-workers-preview:
     name: Deploy Workers Preview
     runs-on: ubuntu-latest
     outputs:
-      worker_url: ${{ steps.worker_deploy.outputs.deployment-url || format('https://sop-builder-worker-preview.{0}.workers.dev', secrets.CLOUDFLARE_ACCOUNT_ID) }}
+      worker_url: ${{ steps.worker_deploy.outputs.url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -61,25 +65,21 @@ jobs:
 
       - name: Deploy API Worker (preview)
         id: worker_deploy
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: apps/worker
-          wranglerVersion: '3'
-          command: deploy --env preview --minify
+        run: |
+          OUTPUT=$(pnpm --filter @sop/worker exec wrangler deploy --env preview --minify 2>&1)
+          echo "$OUTPUT"
+          URL=$(echo "$OUTPUT" | grep -oP 'https://[^\s]+\.workers\.dev' | tail -1)
+          echo "url=${URL:-https://sop-builder-worker-preview.${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.workers.dev}" >> "$GITHUB_OUTPUT"
         env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           PREVIEW_NAMESPACE: pr-${{ github.event.pull_request.number }}
 
       - name: Deploy Queue Consumer (preview)
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: apps/queue-consumer
-          wranglerVersion: '3'
-          command: deploy --env preview --minify
+        run: pnpm --filter @sop/queue-consumer exec wrangler deploy --env preview --minify
         env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           PREVIEW_NAMESPACE: pr-${{ github.event.pull_request.number }}
 
   run-e2e:
