@@ -94,10 +94,18 @@ jobs:
     environment: production
     steps:
       - name: Set webhook URL
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          WORKER_URL: ${{ secrets.WORKER_URL }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
         run: |
-          curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/setWebhook" \
-            -d "url=${{ secrets.WORKER_URL }}/webhook" \
-            -d "secret_token=${{ secrets.WEBHOOK_SECRET }}" \
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$WORKER_URL" ]; then
+            echo "::warning::TELEGRAM_BOT_TOKEN or WORKER_URL not set — skipping webhook registration"
+            exit 0
+          fi
+          curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
+            -d "url=${WORKER_URL}/webhook" \
+            -d "secret_token=${WEBHOOK_SECRET}" \
             -d "allowed_updates=[\"message\",\"callback_query\",\"pre_checkout_query\"]"
 
   run-migrations:
@@ -132,9 +140,15 @@ jobs:
     environment: production
     steps:
       - name: Health check - API Worker
+        env:
+          WORKER_URL: ${{ secrets.WORKER_URL }}
         run: |
+          if [ -z "$WORKER_URL" ]; then
+            echo "::warning::WORKER_URL secret not set — skipping health check"
+            exit 0
+          fi
           echo "Checking API Worker health..."
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.WORKER_URL }}/health" || echo "000")
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$WORKER_URL/health" || echo "000")
           echo "API Health: $HTTP_STATUS"
           if [ "$HTTP_STATUS" != "200" ]; then
             echo "::error::API Worker health check failed with status $HTTP_STATUS"
