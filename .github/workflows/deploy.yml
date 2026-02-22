@@ -34,7 +34,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/worker
-          wranglerVersion: "3"
+          wranglerVersion: '3'
           command: deploy --minify
 
   deploy-queue-consumer:
@@ -62,7 +62,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/queue-consumer
-          wranglerVersion: "3"
+          wranglerVersion: '3'
           command: deploy --minify
 
   deploy-tma-web:
@@ -92,7 +92,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: "3"
+          wranglerVersion: '3'
           command: pages deploy apps/tma-web/dist --project-name=sop-builder-tma
 
   set-webhook:
@@ -133,20 +133,13 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/worker
-          wranglerVersion: "3"
+          wranglerVersion: '3'
           command: d1 migrations apply sop-builder-db --remote
 
   post-deploy-smoke:
     name: Post-Deploy Smoke Check
     runs-on: ubuntu-latest
-    needs:
-      [
-        deploy-worker,
-        deploy-queue-consumer,
-        deploy-tma-web,
-        run-migrations,
-        set-webhook,
-      ]
+    needs: [deploy-worker, deploy-queue-consumer, deploy-tma-web, run-migrations, set-webhook]
     environment: production
     steps:
       - name: Health check - API Worker
