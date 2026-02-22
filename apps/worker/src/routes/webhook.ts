@@ -100,8 +100,8 @@ async function handleStartCommand(
 ) {
   const webAppUrl =
     env.ENVIRONMENT === 'production'
-      ? 'https://sop-builder.pages.dev'
-      : 'https://sop-builder-dev.pages.dev';
+      ? 'https://sop-builder-tma.pages.dev'
+      : 'https://sop-builder-tma.pages.dev';
 
   await sendMessage(
     env.BOT_TOKEN,
