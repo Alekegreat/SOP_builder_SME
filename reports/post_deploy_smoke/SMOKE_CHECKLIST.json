@@ -5,7 +5,7 @@
     "environment": "production",
     "prod_tma_url": "https://sop-builder-tma.pages.dev",
     "prod_api_url": "https://sop-builder-worker.alekea18.workers.dev",
-    "telegram_bot_username": "@Herna_Gar",
+    "telegram_bot_username": "@sop_builder_bot",
     "telegram_test_user_id": "7311075897",
     "telegram_admin_user_id": "6561249271"
   },

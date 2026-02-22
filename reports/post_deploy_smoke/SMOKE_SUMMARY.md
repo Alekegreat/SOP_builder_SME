@@ -31,7 +31,7 @@
 
 ## Telegram Bot
 
-- **Username:** @Herna_Gar
+- **Username:** @sop_builder_bot
 - **Test User ID:** 7311075897
 - **Admin User ID:** 6561249271
 
@@ -81,7 +81,7 @@ The operator must perform these steps from a Telegram client:
 
 ### Step 5: Bot Commands
 
-1. Open Telegram and search for `@Herna_Gar`
+1. Open Telegram and search for `@sop_builder_bot`
 2. Send `/start` → verify bot responds with welcome message
 3. Send `/new_sop` → verify interview begins (one question at a time)
 4. Send `/my_sops` → verify list response (may be empty)
