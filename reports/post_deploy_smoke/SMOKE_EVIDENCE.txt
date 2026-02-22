@@ -1,0 +1,79 @@
+== POST-DEPLOY SMOKE EVIDENCE LOG ==
+== Date: 2026-02-22T13:55:00Z ==
+== Git SHA: eb90e67 ==
+
+=== Step 1: DNS + TLS + HTTPS ===
+[13:55:08] curl -sI https://sop-builder-tma.pages.dev/
+  HTTP/1.1 200 OK
+  Content-Type: text/html; charset=utf-8
+  Server: cloudflare
+  CF-RAY: 9d1efab9d93fece9-ALA
+  x-content-type-options: nosniff
+  referrer-policy: strict-origin-when-cross-origin
+
+[13:55:15] curl -sI https://sop-builder-worker.alekea18.workers.dev/health
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+  Server: cloudflare
+  CF-RAY: 9d1efae7ff32543c-TLL
+
+=== Step 2: Pages Build Sanity ===
+[13:55:20] TMA_BASE_URL=https://sop-builder-tma.pages.dev npx playwright test
+  Running 2 tests using 2 workers
+  ✓ loads dashboard and navigates to SOP library (4.2s)
+  ✓ opens analytics from dashboard (3.5s)
+  2 passed (5.2s)
+
+=== Step 3: API Health ===
+[13:57:38] GET /health
+  {"status":"ok","timestamp":"2026-02-22T13:57:38.621Z"}
+
+[13:57:40] GET /nonexistent
+  {"error":{"code":"NOT_FOUND","message":"Route not found"}}
+
+=== Step 4: Telegram Auth (negative cases) ===
+[13:58:01] POST /auth/telegram body={}
+  HTTP 400 VALIDATION_ERROR
+
+[13:58:03] POST /auth/telegram body={"initData":""}
+  HTTP 400
+
+[13:58:05] POST /auth/telegram body={"initData":"fake_data_tampered_hash"}
+  HTTP 401 Unauthorized
+
+=== Step 5: Webhook Security ===
+[13:58:10] POST /webhook/telegram body={"update_id":1} (no secret header)
+  HTTP 401 UNAUTHORIZED
+
+=== Step 8: RBAC Isolation ===
+[13:58:15] GET /sops (no auth) → 401
+[13:58:16] GET /sops (bogus JWT) → 401
+[13:58:17] POST /sops (no auth) → 401
+[13:58:18] PUT /sops/x (no auth) → 401
+[13:58:19] DELETE /sops/x (no auth) → 401
+[13:58:20] GET /admin/stats (no auth) → 401
+[13:58:21] GET /admin/users (no auth) → 401
+[13:58:22] GET /admin/stats (fake Bearer) → 401
+[13:58:23] GET /workspace/members (no auth) → 401
+[13:58:24] GET /workspace/roles (no auth) → 401
+[13:58:25] GET /workspace/roles (fake Bearer) → 401
+[13:58:26] POST /workspace/invite (no auth) → 401
+[13:58:27] GET /approvals/inbox (no auth) → 401
+[13:58:28] POST /approvals/x/approve (no auth) → 401
+[13:58:29] GET /analytics/overview (no auth) → 401
+[13:58:30] POST /templates → 404 (no POST handler — correct)
+[13:58:31] DELETE /templates → 404 (no DELETE handler — correct)
+[13:58:32] GET /templates → 200 (intentionally public, read-only catalog)
+
+=== Step 11: Payment Webhook ===
+[13:58:35] POST /billing/stars/webhook (no auth) → 401
+
+=== Local Test Suite Evidence ===
+[13:47:58] pnpm test → 138 passed, 99.79% coverage
+[13:48:06] pnpm test:integration → 30 passed
+[13:48:14] pnpm test:security → 80 passed
+[13:48:20] pnpm lint → 0 errors (1 warning)
+[13:48:25] pnpm typecheck → clean
+[13:48:30] pnpm format:check → clean
+
+== END OF EVIDENCE LOG ==

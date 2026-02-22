@@ -80,6 +80,8 @@ jobs:
 
       - name: Build TMA Web
         run: pnpm --filter @sop/tma-web build
+        env:
+          VITE_API_URL: ${{ secrets.WORKER_URL }}
 
       - name: Deploy to Cloudflare Pages
         run: pnpm --filter @sop/worker exec wrangler pages deploy ../tma-web/dist --project-name=sop-builder-tma
