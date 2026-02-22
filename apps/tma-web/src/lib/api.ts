@@ -147,14 +147,14 @@ export function getBillingPlan(workspaceId: string) {
 }
 
 export function upgradePlan(workspaceId: string, plan: string) {
-  return request<Record<string, unknown>>('/billing/upgrade', {
+  return request<{ invoiceUrl: string }>('/billing/upgrade', {
     method: 'POST',
     body: JSON.stringify({ workspaceId, plan }),
   });
 }
 
 export function purchaseCredits(workspaceId: string, packId: string) {
-  return request<Record<string, unknown>>('/billing/credits', {
+  return request<{ invoiceUrl: string }>('/billing/credits', {
     method: 'POST',
     body: JSON.stringify({ workspaceId, packId }),
   });

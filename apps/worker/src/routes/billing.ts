@@ -13,11 +13,13 @@ import {
 import { writeAuditLog } from '../services/audit.js';
 import { isFeatureEnabled } from '../env.js';
 import type { WorkspaceRole, Plan } from '@sop/shared';
-import { TonConfirmSchema } from '@sop/shared';
+import { TonConfirmSchema, PLAN_STARS_PRICES, CREDIT_PACKS } from '@sop/shared';
 
 export const billingRoutes = new Hono<AppEnv>();
 
 billingRoutes.use('/plan', authMiddleware);
+billingRoutes.use('/upgrade', authMiddleware);
+billingRoutes.use('/credits', authMiddleware);
 billingRoutes.use('/ton/confirm', authMiddleware);
 
 async function getMembership(db: D1Database, workspaceId: string, userId: string) {
@@ -42,6 +44,86 @@ billingRoutes.get('/plan', async (c) => {
   await getMembership(c.env.DB, workspaceId, auth.userId);
   const info = await getBillingInfo(c.env.DB, workspaceId);
   return c.json(info);
+});
+
+/**
+ * POST /billing/upgrade — Create Telegram Stars invoice link for plan upgrade
+ */
+billingRoutes.post('/upgrade', async (c) => {
+  const auth = getAuth(c);
+  const { workspaceId, plan } = await c.req.json<{ workspaceId: string; plan: string }>();
+  if (!workspaceId || !plan) {
+    return c.json({ error: { code: 'BAD_REQUEST', message: 'workspaceId and plan required' } }, 400);
+  }
+
+  const role = await getMembership(c.env.DB, workspaceId, auth.userId);
+  assertPermission(role, 'workspace:billing');
+
+  const starPrice = PLAN_STARS_PRICES[plan as Exclude<Plan, 'FREE'>];
+  if (!starPrice) {
+    return c.json({ error: { code: 'BAD_REQUEST', message: 'Invalid plan' } }, 400);
+  }
+
+  const payload = JSON.stringify({ workspaceId, planId: plan });
+  const resp = await fetch(`https://api.telegram.org/bot${c.env.BOT_TOKEN}/createInvoiceLink`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: `SOP Builder — ${plan.replace('_', ' ')} Plan`,
+      description: `Monthly subscription to the ${plan.replace('_', ' ')} plan.`,
+      payload,
+      currency: 'XTR',
+      prices: [{ label: `${plan.replace('_', ' ')} (monthly)`, amount: starPrice }],
+    }),
+  });
+
+  const data = await resp.json() as { ok: boolean; result?: string; description?: string };
+  if (!data.ok) {
+    console.error('createInvoiceLink error:', data);
+    return c.json({ error: { code: 'PAYMENT_ERROR', message: data.description ?? 'Failed to create invoice' } }, 502);
+  }
+
+  return c.json({ invoiceUrl: data.result });
+});
+
+/**
+ * POST /billing/credits — Create Telegram Stars invoice link for credit pack
+ */
+billingRoutes.post('/credits', async (c) => {
+  const auth = getAuth(c);
+  const { workspaceId, packId } = await c.req.json<{ workspaceId: string; packId: string }>();
+  if (!workspaceId || !packId) {
+    return c.json({ error: { code: 'BAD_REQUEST', message: 'workspaceId and packId required' } }, 400);
+  }
+
+  const role = await getMembership(c.env.DB, workspaceId, auth.userId);
+  assertPermission(role, 'workspace:billing');
+
+  const pack = CREDIT_PACKS.find((p) => p.id === packId);
+  if (!pack) {
+    return c.json({ error: { code: 'BAD_REQUEST', message: 'Invalid pack' } }, 400);
+  }
+
+  const payload = JSON.stringify({ workspaceId, credits: pack.credits });
+  const resp = await fetch(`https://api.telegram.org/bot${c.env.BOT_TOKEN}/createInvoiceLink`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: `SOP Builder — ${pack.credits} AI Credits`,
+      description: `${pack.credits} AI generation credits for your workspace.`,
+      payload,
+      currency: 'XTR',
+      prices: [{ label: `${pack.credits} AI Credits`, amount: pack.starsPrice }],
+    }),
+  });
+
+  const data = await resp.json() as { ok: boolean; result?: string; description?: string };
+  if (!data.ok) {
+    console.error('createInvoiceLink error:', data);
+    return c.json({ error: { code: 'PAYMENT_ERROR', message: data.description ?? 'Failed to create invoice' } }, 502);
+  }
+
+  return c.json({ invoiceUrl: data.result });
 });
 
 /**
