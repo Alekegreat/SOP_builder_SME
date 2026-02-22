@@ -6,14 +6,15 @@ compatibility_flags = ["nodejs_compat"]
 [observability]
 enabled = true
 
+# ── Default (production) bindings ──
 [[d1_databases]]
 binding = "DB"
-database_name = "sop-db"
-database_id = "YOUR_D1_DATABASE_ID"
+database_name = "sop-builder-db"
+database_id = "ee833f4f-bb13-44b6-8842-f74b1f61a4d3"
 
 [[r2_buckets]]
 binding = "R2"
-bucket_name = "sop-exports"
+bucket_name = "sop-builder-exports"
 
 [[queues.producers]]
 binding = "QUEUE"
@@ -21,6 +22,31 @@ queue = "sop-jobs"
 
 [vars]
 ENVIRONMENT = "production"
+ENV_NAME = "production"
+FEATURE_FLAGS = "{}"
+
+# ── Preview environment ──
+[env.preview]
+name = "sop-builder-worker-preview"
+
+[env.preview.vars]
+ENVIRONMENT = "preview"
+ENV_NAME = "preview"
+PREVIEW_NAMESPACE = "preview"
+FEATURE_FLAGS = "{}"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "sop-builder-db"
+database_id = "ee833f4f-bb13-44b6-8842-f74b1f61a4d3"
+
+[[env.preview.r2_buckets]]
+binding = "R2"
+bucket_name = "sop-builder-exports"
+
+[[env.preview.queues.producers]]
+binding = "QUEUE"
+queue = "sop-jobs"
 
 # Secrets (set via wrangler secret put):
 # BOT_TOKEN

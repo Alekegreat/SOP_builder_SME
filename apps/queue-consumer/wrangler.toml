@@ -1,6 +1,7 @@
 name = "sop-queue-consumer"
 main = "src/index.ts"
-compatibility_date = "2024-12-01"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
 
 [[queues.consumers]]
 queue = "sop-jobs"
@@ -11,7 +12,7 @@ max_retries = 3
 [[d1_databases]]
 binding = "DB"
 database_name = "sop-builder-db"
-database_id = "YOUR_D1_DATABASE_ID"
+database_id = "ee833f4f-bb13-44b6-8842-f74b1f61a4d3"
 
 [[r2_buckets]]
 binding = "R2"
@@ -19,3 +20,30 @@ bucket_name = "sop-builder-exports"
 
 [vars]
 ENVIRONMENT = "production"
+ENV_NAME = "production"
+FEATURE_FLAGS = "{}"
+
+# ── Preview environment ──
+[env.preview]
+name = "sop-queue-consumer-preview"
+
+[env.preview.vars]
+ENVIRONMENT = "preview"
+ENV_NAME = "preview"
+PREVIEW_NAMESPACE = "preview"
+FEATURE_FLAGS = "{}"
+
+[[env.preview.queues.consumers]]
+queue = "sop-jobs"
+max_batch_size = 5
+max_batch_timeout = 30
+max_retries = 3
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "sop-builder-db"
+database_id = "ee833f4f-bb13-44b6-8842-f74b1f61a4d3"
+
+[[env.preview.r2_buckets]]
+binding = "R2"
+bucket_name = "sop-builder-exports"

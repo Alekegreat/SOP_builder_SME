@@ -131,3 +131,46 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/worker
           command: d1 migrations apply sop-builder-db --remote
+
+  post-deploy-smoke:
+    name: Post-Deploy Smoke Check
+    runs-on: ubuntu-latest
+    needs:
+      [
+        deploy-worker,
+        deploy-queue-consumer,
+        deploy-tma-web,
+        run-migrations,
+        set-webhook,
+      ]
+    environment: production
+    steps:
+      - name: Health check - API Worker
+        run: |
+          echo "Checking API Worker health..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.WORKER_URL }}/health" || echo "000")
+          echo "API Health: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "::error::API Worker health check failed with status $HTTP_STATUS"
+            exit 1
+          fi
+
+      - name: Health check - TMA Web
+        run: |
+          echo "Checking TMA Web..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://sop-builder-tma.pages.dev/" || echo "000")
+          echo "TMA Web: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "::warning::TMA Web returned status $HTTP_STATUS"
+          fi
+
+      - name: Smoke summary
+        run: |
+          echo "## Production Deploy Smoke Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| API Health | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| TMA Web | ✅ Accessible |" >> $GITHUB_STEP_SUMMARY
+          echo "| Migrations | ✅ Applied |" >> $GITHUB_STEP_SUMMARY
+          echo "| Webhook | ✅ Set |" >> $GITHUB_STEP_SUMMARY

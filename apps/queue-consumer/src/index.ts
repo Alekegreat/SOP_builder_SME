@@ -11,6 +11,9 @@ export interface ConsumerEnv {
   BOT_TOKEN: string;
   ENVIRONMENT: string;
   ENCRYPTION_KEY: string;
+  ENV_NAME?: string;
+  PREVIEW_NAMESPACE?: string;
+  FEATURE_FLAGS?: string;
 }
 
 export interface QueueMessage {

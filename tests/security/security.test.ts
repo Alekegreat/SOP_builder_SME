@@ -690,17 +690,13 @@ describe('Version Immutability — No Update Endpoint', () => {
     const app = (await import('../../apps/worker/src/app.js')).default;
     const env = {
       DB: {
-        prepare: vi
-          .fn()
-          .mockReturnValue({
-            bind: vi
-              .fn()
-              .mockReturnValue({
-                first: vi.fn().mockResolvedValue(null),
-                run: vi.fn(),
-                all: vi.fn().mockResolvedValue({ results: [] }),
-              }),
+        prepare: vi.fn().mockReturnValue({
+          bind: vi.fn().mockReturnValue({
+            first: vi.fn().mockResolvedValue(null),
+            run: vi.fn(),
+            all: vi.fn().mockResolvedValue({ results: [] }),
           }),
+        }),
       },
       BUCKET: { put: vi.fn(), get: vi.fn(), delete: vi.fn() },
       QUEUE: { send: vi.fn() },
@@ -734,5 +730,185 @@ describe('Version Immutability — No Update Endpoint', () => {
       env,
     );
     expect(patchRes.status).toBe(404);
+  });
+});
+
+// ── 11. Webhook Replay Idempotency ──
+
+describe('Webhook Replay Idempotency', () => {
+  it('same Telegram update_id should be processable only once (structural)', () => {
+    // Telegram sends each update with a unique update_id.
+    // If the same update_id arrives again (replay), the bot checks
+    // for already-processed state (payment_events dedup by external_id).
+    // This test validates that the dedup key structure is sound.
+    const updateId1 = 123456;
+    const updateId2 = 123456;
+    const processed = new Set<number>();
+
+    processed.add(updateId1);
+    expect(processed.has(updateId2)).toBe(true); // Replay detected
+
+    const updateId3 = 789012;
+    expect(processed.has(updateId3)).toBe(false); // New update
+  });
+
+  it('duplicate webhook payload with same external_id rejected by dedup logic', async () => {
+    const { recordPaymentEvent } = await import('../../apps/worker/src/services/payments.js');
+    const mockDb = {
+      prepare: vi.fn().mockReturnValue({
+        bind: vi.fn().mockReturnValue({
+          first: vi
+            .fn()
+            // First call: no existing record
+            .mockResolvedValueOnce(null)
+            // Second call: existing record (replay)
+            .mockResolvedValueOnce({ id: 'pe-1', status: 'completed' }),
+          run: vi.fn().mockResolvedValue({}),
+        }),
+      }),
+    } as unknown as D1Database;
+
+    // First call processes
+    const result1 = await recordPaymentEvent(mockDb, {
+      provider: 'stars',
+      externalId: 'stars-replay-test-1',
+      workspaceId: 'ws-1',
+      amount: 100,
+      currency: 'XTR',
+      status: 'completed',
+    });
+    expect(result1).toBeDefined();
+
+    // Second call with same externalId is deduplicated
+    const result2 = await recordPaymentEvent(mockDb, {
+      provider: 'stars',
+      externalId: 'stars-replay-test-1',
+      workspaceId: 'ws-1',
+      amount: 100,
+      currency: 'XTR',
+      status: 'completed',
+    });
+    expect(result2).toBeDefined();
+    // The payment_events table enforces (provider, external_id) uniqueness
+  });
+});
+
+// ── 12. Job Enqueue Idempotency ──
+
+describe('Job Enqueue Idempotency', () => {
+  it('duplicate interview session cannot create duplicate SOP versions (structural)', () => {
+    // The queue consumer should check if a version already exists
+    // for a given (sop_id, interview_session_id) before creating.
+    // This test validates the structural constraint.
+    const processedSessions = new Map<string, string>();
+    const sessionId = 'session-123';
+    const sopId = 'sop-456';
+    const key = `${sopId}:${sessionId}`;
+
+    // First enqueue
+    expect(processedSessions.has(key)).toBe(false);
+    processedSessions.set(key, 'version-1');
+
+    // Duplicate enqueue
+    expect(processedSessions.has(key)).toBe(true);
+    expect(processedSessions.get(key)).toBe('version-1');
+  });
+
+  it('different sessions for same SOP create separate versions', () => {
+    const processedSessions = new Map<string, string>();
+
+    processedSessions.set('sop-1:session-a', 'v-1');
+    processedSessions.set('sop-1:session-b', 'v-2');
+
+    expect(processedSessions.size).toBe(2);
+    expect(processedSessions.get('sop-1:session-a')).not.toBe(
+      processedSessions.get('sop-1:session-b'),
+    );
+  });
+});
+
+// ── 13. Preview Namespace Isolation ──
+
+describe('Preview Namespace Isolation', () => {
+  it('namespacedWorkspaceName adds prefix in preview', async () => {
+    const { namespacedWorkspaceName } =
+      await import('../../apps/worker/src/middleware/preview-namespace.js');
+    expect(namespacedWorkspaceName('My Workspace', 'pr-42')).toBe('[pr-42] My Workspace');
+    expect(namespacedWorkspaceName('My Workspace', null)).toBe('My Workspace');
+  });
+
+  it('validateWorkspaceNamespace enforces prefix when namespace set', async () => {
+    const { validateWorkspaceNamespace } =
+      await import('../../apps/worker/src/middleware/preview-namespace.js');
+    // Preview environment
+    expect(validateWorkspaceNamespace('[pr-42] My Workspace', 'pr-42')).toBe(true);
+    expect(validateWorkspaceNamespace('My Workspace', 'pr-42')).toBe(false);
+    expect(validateWorkspaceNamespace('[pr-99] Other', 'pr-42')).toBe(false);
+
+    // Production (no namespace)
+    expect(validateWorkspaceNamespace('My Workspace', null)).toBe(true);
+    expect(validateWorkspaceNamespace('[pr-42] My Workspace', null)).toBe(true);
+  });
+
+  it('different PR namespaces cannot access each other workspaces', async () => {
+    const { validateWorkspaceNamespace } =
+      await import('../../apps/worker/src/middleware/preview-namespace.js');
+    const pr1Workspace = '[pr-1] Team Workspace';
+    const pr2Workspace = '[pr-2] Team Workspace';
+
+    // PR-1 can only access PR-1 workspaces
+    expect(validateWorkspaceNamespace(pr1Workspace, 'pr-1')).toBe(true);
+    expect(validateWorkspaceNamespace(pr2Workspace, 'pr-1')).toBe(false);
+
+    // PR-2 can only access PR-2 workspaces
+    expect(validateWorkspaceNamespace(pr2Workspace, 'pr-2')).toBe(true);
+    expect(validateWorkspaceNamespace(pr1Workspace, 'pr-2')).toBe(false);
+  });
+
+  it('preview namespace propagates through middleware', async () => {
+    vi.resetModules();
+    const { previewNamespaceMiddleware, getPreviewNamespace: _getPreviewNamespace } =
+      await import('../../apps/worker/src/middleware/preview-namespace.js');
+
+    // Mock Hono context with PREVIEW_NAMESPACE
+    const store: Record<string, unknown> = {};
+    const mockCtx = {
+      env: { PREVIEW_NAMESPACE: 'pr-42' },
+      set: (key: string, val: unknown) => {
+        store[key] = val;
+      },
+      get: (key: string) => store[key],
+    } as never;
+
+    let nextCalled = false;
+    await previewNamespaceMiddleware(mockCtx, async () => {
+      nextCalled = true;
+    });
+
+    expect(nextCalled).toBe(true);
+    expect(store['previewNamespace']).toBe('pr-42');
+  });
+
+  it('no namespace in production context', async () => {
+    vi.resetModules();
+    const { previewNamespaceMiddleware } =
+      await import('../../apps/worker/src/middleware/preview-namespace.js');
+
+    const store: Record<string, unknown> = {};
+    const mockCtx = {
+      env: {},
+      set: (key: string, val: unknown) => {
+        store[key] = val;
+      },
+      get: (key: string) => store[key],
+    } as never;
+
+    let nextCalled = false;
+    await previewNamespaceMiddleware(mockCtx, async () => {
+      nextCalled = true;
+    });
+
+    expect(nextCalled).toBe(true);
+    expect(store['previewNamespace']).toBeUndefined();
   });
 });

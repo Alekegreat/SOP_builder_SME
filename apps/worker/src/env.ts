@@ -33,6 +33,9 @@ export interface Env {
 
   // Environment
   ENVIRONMENT?: string;
+  ENV_NAME?: string;
+  PREVIEW_NAMESPACE?: string;
+  FEATURE_FLAGS?: string;
 }
 
 export function isFeatureEnabled(env: Env, feature: string): boolean {

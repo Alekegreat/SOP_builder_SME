@@ -4,6 +4,7 @@ import type { Env } from './env.js';
 import { authMiddleware, type AuthContext } from './middleware/auth.js';
 import { errorHandler } from './middleware/error.js';
 import { loggerMiddleware } from './middleware/logger.js';
+import { previewNamespaceMiddleware } from './middleware/preview-namespace.js';
 import { authRoutes } from './routes/auth.js';
 import { sopRoutes } from './routes/sops.js';
 import { approvalRoutes } from './routes/approvals.js';
@@ -19,6 +20,7 @@ export type AppEnv = {
   Bindings: Env;
   Variables: {
     auth?: AuthContext;
+    previewNamespace?: string;
   };
 };
 
@@ -36,6 +38,7 @@ app.use(
 );
 
 app.use('*', loggerMiddleware);
+app.use('*', previewNamespaceMiddleware);
 app.onError(errorHandler);
 
 // ── Health check ──

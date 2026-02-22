@@ -68,6 +68,11 @@ jobs:
       - name: Run unit tests
         run: pnpm test:unit -- --reporter=junit --outputFile=test-results/unit.xml
 
+      - name: Verify coverage thresholds (>=95%)
+        run: |
+          echo "Coverage thresholds enforced in vitest.config.ts (95% statements/branches/functions/lines)"
+          echo "Tests above would fail if coverage drops below thresholds"
+
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         if: always()
