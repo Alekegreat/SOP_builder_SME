@@ -2,6 +2,14 @@
 
 Cloudflare-first Telegram Bot + Telegram Mini App SaaS for creating, approving, versioning, and retaining SOPs.
 
+## Deployed Services
+
+| Service        | URL                               | Notes                                      |
+| -------------- | --------------------------------- | ------------------------------------------ |
+| API Worker     | `WORKER_URL` GitHub secret        | Cloudflare Worker — Hono API + Bot webhook |
+| TMA Web        | https://sop-builder-tma.pages.dev | Cloudflare Pages — Telegram Mini App       |
+| Queue Consumer | _(no HTTP endpoint)_              | Cloudflare Queue consumer — async jobs     |
+
 ## Pricing & entitlements
 
 - `FREE` (BYO-AI key): 1 workspace, 10 SOPs, basic history, watermark exports, limited approvals.
