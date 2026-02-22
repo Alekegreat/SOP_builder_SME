@@ -53,7 +53,10 @@ billingRoutes.post('/upgrade', async (c) => {
   const auth = getAuth(c);
   const { workspaceId, plan } = await c.req.json<{ workspaceId: string; plan: string }>();
   if (!workspaceId || !plan) {
-    return c.json({ error: { code: 'BAD_REQUEST', message: 'workspaceId and plan required' } }, 400);
+    return c.json(
+      { error: { code: 'BAD_REQUEST', message: 'workspaceId and plan required' } },
+      400,
+    );
   }
 
   const role = await getMembership(c.env.DB, workspaceId, auth.userId);
@@ -77,10 +80,13 @@ billingRoutes.post('/upgrade', async (c) => {
     }),
   });
 
-  const data = await resp.json() as { ok: boolean; result?: string; description?: string };
+  const data = (await resp.json()) as { ok: boolean; result?: string; description?: string };
   if (!data.ok) {
     console.error('createInvoiceLink error:', data);
-    return c.json({ error: { code: 'PAYMENT_ERROR', message: data.description ?? 'Failed to create invoice' } }, 502);
+    return c.json(
+      { error: { code: 'PAYMENT_ERROR', message: data.description ?? 'Failed to create invoice' } },
+      502,
+    );
   }
 
   return c.json({ invoiceUrl: data.result });
@@ -93,7 +99,10 @@ billingRoutes.post('/credits', async (c) => {
   const auth = getAuth(c);
   const { workspaceId, packId } = await c.req.json<{ workspaceId: string; packId: string }>();
   if (!workspaceId || !packId) {
-    return c.json({ error: { code: 'BAD_REQUEST', message: 'workspaceId and packId required' } }, 400);
+    return c.json(
+      { error: { code: 'BAD_REQUEST', message: 'workspaceId and packId required' } },
+      400,
+    );
   }
 
   const role = await getMembership(c.env.DB, workspaceId, auth.userId);
@@ -117,10 +126,13 @@ billingRoutes.post('/credits', async (c) => {
     }),
   });
 
-  const data = await resp.json() as { ok: boolean; result?: string; description?: string };
+  const data = (await resp.json()) as { ok: boolean; result?: string; description?: string };
   if (!data.ok) {
     console.error('createInvoiceLink error:', data);
-    return c.json({ error: { code: 'PAYMENT_ERROR', message: data.description ?? 'Failed to create invoice' } }, 502);
+    return c.json(
+      { error: { code: 'PAYMENT_ERROR', message: data.description ?? 'Failed to create invoice' } },
+      502,
+    );
   }
 
   return c.json({ invoiceUrl: data.result });

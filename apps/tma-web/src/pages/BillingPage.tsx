@@ -11,9 +11,7 @@ type TelegramWebApp = {
 };
 
 function getTelegramWebApp(): TelegramWebApp | null {
-  return (
-    (window as unknown as { Telegram?: { WebApp?: TelegramWebApp } }).Telegram?.WebApp ?? null
-  );
+  return (window as unknown as { Telegram?: { WebApp?: TelegramWebApp } }).Telegram?.WebApp ?? null;
 }
 
 export function BillingPage() {
@@ -172,7 +170,9 @@ export function BillingPage() {
                   disabled={!!pendingAction}
                   className="mt-3 w-full bg-tg-button text-tg-button-text rounded-lg py-2 text-sm font-medium disabled:opacity-50"
                 >
-                  {pendingAction === `upgrade:${plan}` ? 'Processing...' : `Upgrade — ${starPrice} ⭐`}
+                  {pendingAction === `upgrade:${plan}`
+                    ? 'Processing...'
+                    : `Upgrade — ${starPrice} ⭐`}
                 </button>
               )}
             </div>
