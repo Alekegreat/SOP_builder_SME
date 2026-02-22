@@ -26,9 +26,7 @@ export async function handleLlmGeneration(job: QueueMessage, env: ConsumerEnv): 
   const { sopId, workspaceId, interviewSessionId, userId, isDelta } = data;
 
   // Get workspace config
-  const workspace = await env.DB.prepare(
-    'SELECT plan, ai_config_json FROM workspaces WHERE id = ?',
-  )
+  const workspace = await env.DB.prepare('SELECT plan, ai_config_json FROM workspaces WHERE id = ?')
     .bind(workspaceId)
     .first<{ plan: string; ai_config_json: string | null }>();
 
@@ -119,9 +117,7 @@ export async function handleLlmGeneration(job: QueueMessage, env: ConsumerEnv): 
   // Insert structured steps, check items, exceptions
   if (sopContent.steps?.length) {
     for (let i = 0; i < sopContent.steps.length; i++) {
-      await env.DB.prepare(
-        'INSERT INTO sop_steps (id, version_id, ord, text) VALUES (?, ?, ?, ?)',
-      )
+      await env.DB.prepare('INSERT INTO sop_steps (id, version_id, ord, text) VALUES (?, ?, ?, ?)')
         .bind(crypto.randomUUID(), versionId, i, sopContent.steps[i]?.text ?? '')
         .run();
     }
@@ -148,9 +144,7 @@ export async function handleLlmGeneration(job: QueueMessage, env: ConsumerEnv): 
   }
 
   // Update SOP current version
-  await env.DB.prepare(
-    "UPDATE sops SET current_version_id = ?, status = 'APPROVED' WHERE id = ?",
-  )
+  await env.DB.prepare("UPDATE sops SET current_version_id = ?, status = 'APPROVED' WHERE id = ?")
     .bind(versionId, sopId)
     .run();
 

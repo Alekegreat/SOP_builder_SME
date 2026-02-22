@@ -16,48 +16,18 @@ export function DashboardPage() {
           description="Start a new interview"
           to="/sops?action=new"
         />
-        <DashboardCard
-          icon="📋"
-          label="My SOPs"
-          description="View all SOPs"
-          to="/sops"
-        />
-        <DashboardCard
-          icon="✅"
-          label="Approvals"
-          description="Pending reviews"
-          to="/approvals"
-        />
-        <DashboardCard
-          icon="🧩"
-          label="Templates"
-          description="SOP templates"
-          to="/templates"
-        />
-        <DashboardCard
-          icon="👥"
-          label="Roles"
-          description="RBAC overview"
-          to="/roles"
-        />
-        <DashboardCard
-          icon="📈"
-          label="Analytics"
-          description="Usage insights"
-          to="/analytics"
-        />
+        <DashboardCard icon="📋" label="My SOPs" description="View all SOPs" to="/sops" />
+        <DashboardCard icon="✅" label="Approvals" description="Pending reviews" to="/approvals" />
+        <DashboardCard icon="🧩" label="Templates" description="SOP templates" to="/templates" />
+        <DashboardCard icon="👥" label="Roles" description="RBAC overview" to="/roles" />
+        <DashboardCard icon="📈" label="Analytics" description="Usage insights" to="/analytics" />
         <DashboardCard
           icon="🧾"
           label="Audit Logs"
           description="Security events"
           to="/audit-logs"
         />
-        <DashboardCard
-          icon="💳"
-          label="Billing"
-          description="Plan & credits"
-          to="/billing"
-        />
+        <DashboardCard icon="💳" label="Billing" description="Plan & credits" to="/billing" />
       </div>
 
       <div className="mt-6 bg-tg-secondary rounded-xl p-4">

@@ -1,8 +1,4 @@
-import {
-  INTERVIEW_QUESTIONS,
-  type InterviewState,
-  type InterviewQuestionKey,
-} from '@sop/shared';
+import { INTERVIEW_QUESTIONS, type InterviewState, type InterviewQuestionKey } from '@sop/shared';
 import type { InterviewTranscriptEntry } from '@sop/shared';
 
 export interface InterviewFSMState {
@@ -81,8 +77,7 @@ export function answerQuestion(
   // For 'additional_steps', "done" means skip
   const isSkip =
     !currentQ.required && (answer.toLowerCase().trim() === 'skip' || answer.trim() === '');
-  const isDone =
-    currentQ.key === 'additional_steps' && answer.toLowerCase().trim() === 'done';
+  const isDone = currentQ.key === 'additional_steps' && answer.toLowerCase().trim() === 'done';
 
   const newTranscript: InterviewTranscriptEntry[] = [
     ...state.transcript,

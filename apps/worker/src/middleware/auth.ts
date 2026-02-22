@@ -30,10 +30,7 @@ export async function authMiddleware(c: Context<AppEnv>, next: Next) {
   const payload = await verifyJwt(token, c.env.JWT_SECRET);
 
   if (!payload) {
-    return c.json(
-      { error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' } },
-      401,
-    );
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' } }, 401);
   }
 
   c.set('auth', {

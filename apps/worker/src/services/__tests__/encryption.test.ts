@@ -8,12 +8,16 @@ const mockSubtle = {
   encrypt: vi.fn().mockImplementation(async (_algo: unknown, _key: unknown, data: ArrayBuffer) => {
     // Return iv + data (simulated)
     const result = new Uint8Array(data.byteLength);
-    new Uint8Array(data).forEach((b, i) => { result[i] = b ^ 0x42; });
+    new Uint8Array(data).forEach((b, i) => {
+      result[i] = b ^ 0x42;
+    });
     return result.buffer;
   }),
   decrypt: vi.fn().mockImplementation(async (_algo: unknown, _key: unknown, data: ArrayBuffer) => {
     const result = new Uint8Array(data.byteLength);
-    new Uint8Array(data).forEach((b, i) => { result[i] = b ^ 0x42; });
+    new Uint8Array(data).forEach((b, i) => {
+      result[i] = b ^ 0x42;
+    });
     return result.buffer;
   }),
 };

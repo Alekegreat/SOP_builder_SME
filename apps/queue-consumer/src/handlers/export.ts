@@ -26,7 +26,12 @@ export async function handleExport(job: QueueMessage, env: ConsumerEnv): Promise
     'SELECT content_json, semver, created_at, created_by_user_id FROM sop_versions WHERE id = ?',
   )
     .bind(versionId)
-    .first<{ content_json: string; semver: string; created_at: string; created_by_user_id: string }>();
+    .first<{
+      content_json: string;
+      semver: string;
+      created_at: string;
+      created_by_user_id: string;
+    }>();
 
   if (!version) {
     throw new Error(`Version not found: ${versionId}`);

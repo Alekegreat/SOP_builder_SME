@@ -85,7 +85,7 @@ export function renderSopToHtml(
 
   ${
     content.exceptions.length > 0
-        ? `<h2>Exceptions & Edge Cases</h2><ul>${content.exceptions.map((e: TextItem) => `<li>${escapeHtml(e.text)}</li>`).join('\n    ')}</ul>`
+      ? `<h2>Exceptions & Edge Cases</h2><ul>${content.exceptions.map((e: TextItem) => `<li>${escapeHtml(e.text)}</li>`).join('\n    ')}</ul>`
       : ''
   }
 

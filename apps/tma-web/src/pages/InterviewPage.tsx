@@ -21,12 +21,17 @@ export function InterviewPage() {
   const [answer, setAnswer] = useState('');
   const progressPercent = ((questionIndex + 1) / INTERVIEW_QUESTIONS.length) * 100;
   const progressWidthClass =
-    progressPercent >= 90 ? 'w-full'
-      : progressPercent >= 75 ? 'w-4/5'
-      : progressPercent >= 60 ? 'w-3/5'
-      : progressPercent >= 40 ? 'w-2/5'
-      : progressPercent >= 20 ? 'w-1/5'
-      : 'w-0';
+    progressPercent >= 90
+      ? 'w-full'
+      : progressPercent >= 75
+        ? 'w-4/5'
+        : progressPercent >= 60
+          ? 'w-3/5'
+          : progressPercent >= 40
+            ? 'w-2/5'
+            : progressPercent >= 20
+              ? 'w-1/5'
+              : 'w-0';
 
   const startMutation = useMutation({
     mutationFn: () => startInterview(id!),
@@ -41,8 +46,7 @@ export function InterviewPage() {
   });
 
   const answerMutation = useMutation({
-    mutationFn: (data: { questionKey: string; answer: string }) =>
-      answerInterview(id!, data),
+    mutationFn: (data: { questionKey: string; answer: string }) => answerInterview(id!, data),
     onSuccess: (data) => {
       setAnswer('');
       if (data.isComplete) {
@@ -72,8 +76,8 @@ export function InterviewPage() {
           <span className="text-5xl mb-4 block">📝</span>
           <h1 className="text-xl font-bold mb-2">SOP Interview</h1>
           <p className="text-tg-hint text-sm mb-6 max-w-xs mx-auto">
-            I'll ask you {INTERVIEW_QUESTIONS.length} questions to understand your process.
-            Answer in natural language — I'll structure it into a professional SOP.
+            I'll ask you {INTERVIEW_QUESTIONS.length} questions to understand your process. Answer
+            in natural language — I'll structure it into a professional SOP.
           </p>
           <button
             onClick={() => startMutation.mutate()}
@@ -97,9 +101,7 @@ export function InterviewPage() {
         <div className="text-center py-12">
           <span className="text-5xl mb-4 block">✅</span>
           <h1 className="text-xl font-bold mb-2">Interview Complete!</h1>
-          <p className="text-tg-hint text-sm mb-6">
-            Ready to generate your SOP with AI.
-          </p>
+          <p className="text-tg-hint text-sm mb-6">Ready to generate your SOP with AI.</p>
           <button
             onClick={() => generateMutation.mutate()}
             disabled={generateMutation.isPending}
@@ -117,7 +119,9 @@ export function InterviewPage() {
       {/* Progress bar */}
       <div className="mb-4">
         <div className="flex justify-between text-xs text-tg-hint mb-1">
-          <span>Question {questionIndex + 1} of {INTERVIEW_QUESTIONS.length}</span>
+          <span>
+            Question {questionIndex + 1} of {INTERVIEW_QUESTIONS.length}
+          </span>
           <span>{Math.round(((questionIndex + 1) / INTERVIEW_QUESTIONS.length) * 100)}%</span>
         </div>
         <div className="w-full bg-tg-secondary rounded-full h-2">

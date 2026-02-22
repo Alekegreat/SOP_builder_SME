@@ -36,10 +36,13 @@ describe('Auth Service', () => {
   describe('JWT', () => {
     it('creates and verifies JWT token (mock)', async () => {
       // Testing the base64url utilities
-      const { base64UrlEncode, base64UrlDecode } = await import('../../src/services/auth.js').catch(() => ({
-        base64UrlEncode: (data: string) => btoa(data).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, ''),
-        base64UrlDecode: (data: string) => atob(data.replace(/-/g, '+').replace(/_/g, '/')),
-      }));
+      const { base64UrlEncode, base64UrlDecode } = await import('../../src/services/auth.js').catch(
+        () => ({
+          base64UrlEncode: (data: string) =>
+            btoa(data).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, ''),
+          base64UrlDecode: (data: string) => atob(data.replace(/-/g, '+').replace(/_/g, '/')),
+        }),
+      );
 
       // Basic encode/decode test
       const original = 'test-data';

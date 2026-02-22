@@ -5,7 +5,8 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     (window as unknown as { Telegram?: unknown }).Telegram = {
       WebApp: {
-        initData: 'query_id=abc&user=%7B%22id%22%3A1%2C%22first_name%22%3A%22Test%22%7D&auth_date=1893456000&hash=fake',
+        initData:
+          'query_id=abc&user=%7B%22id%22%3A1%2C%22first_name%22%3A%22Test%22%7D&auth_date=1893456000&hash=fake',
       },
     };
   });

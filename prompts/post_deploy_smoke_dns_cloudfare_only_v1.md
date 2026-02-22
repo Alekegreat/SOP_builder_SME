@@ -1,83 +1,43 @@
 id: "POST_DEPLOY_SMOKE_DNS_CLOUDFLARE_ONLY_V1"
 POST_DEPLOY_SMOKE_DNS_CLOUDFLARE_ONLY_PROMPT:
-  role: >
-    Act as Senior DevOps + Senior Security Engineer.
-    Perform a Cloudflare DNS/TLS/Redirects smoke verification for a Telegram Bot + TMA system:
-    Cloudflare Pages (TMA) + Cloudflare Workers (API/Bot webhook).
-    Be strict, produce evidence, and recommend rollback or configuration changes when needed.
+role: >
+Act as Senior DevOps + Senior Security Engineer.
+Perform a Cloudflare DNS/TLS/Redirects smoke verification for a Telegram Bot + TMA system:
+Cloudflare Pages (TMA) + Cloudflare Workers (API/Bot webhook).
+Be strict, produce evidence, and recommend rollback or configuration changes when needed.
 
-  scope:
-    environment: "PRODUCTION"
-    focus:
-      - "DNS correctness (NS, A/AAAA/CNAME, flattening behavior)"
-      - "Proxy status (orange cloud vs DNS-only)"
-      - "TLS/SSL mode correctness"
-      - "Edge certificates validity"
-      - "Redirect chain correctness (apex↔www, http→https, path rewrites)"
-      - "API subdomain routing"
-      - "Bot webhook reachability from Telegram"
-    constraints:
-      - "Do not require paid services."
-      - "Do not change any configuration automatically."
-      - "Do not leak secrets in logs."
+scope:
+environment: "PRODUCTION"
+focus: - "DNS correctness (NS, A/AAAA/CNAME, flattening behavior)" - "Proxy status (orange cloud vs DNS-only)" - "TLS/SSL mode correctness" - "Edge certificates validity" - "Redirect chain correctness (apex↔www, http→https, path rewrites)" - "API subdomain routing" - "Bot webhook reachability from Telegram"
+constraints: - "Do not require paid services." - "Do not change any configuration automatically." - "Do not leak secrets in logs."
 
-  inputs_required_from_operator:
-    - name: ZONE_DOMAIN
-      example: "example.com"
-    - name: TMA_FQDN
-      example: "app.example.com"
-    - name: API_FQDN
-      example: "api.example.com"
-    - name: EXPECTED_TMA_ORIGIN
-      example: "Cloudflare Pages project (pages.dev) or custom domain mapping"
-    - name: EXPECTED_API_ORIGIN
-      example: "Cloudflare Worker route bound to api.example.com"
-    - name: TELEGRAM_WEBHOOK_URL
-      example: "https://api.example.com/telegram/webhook"
-    - name: OPTIONAL_CLOUDFLARE_API_TOKEN
-      example: "token with Zone:Read, DNS:Read, SSL:Read (optional)"
-    - name: OPTIONAL_CLOUDFLARE_ZONE_ID
-      example: "zone id (optional if token allows lookup)"
+inputs_required_from_operator: - name: ZONE_DOMAIN
+example: "example.com" - name: TMA_FQDN
+example: "app.example.com" - name: API_FQDN
+example: "api.example.com" - name: EXPECTED_TMA_ORIGIN
+example: "Cloudflare Pages project (pages.dev) or custom domain mapping" - name: EXPECTED_API_ORIGIN
+example: "Cloudflare Worker route bound to api.example.com" - name: TELEGRAM_WEBHOOK_URL
+example: "https://api.example.com/telegram/webhook" - name: OPTIONAL_CLOUDFLARE_API_TOKEN
+example: "token with Zone:Read, DNS:Read, SSL:Read (optional)" - name: OPTIONAL_CLOUDFLARE_ZONE_ID
+example: "zone id (optional if token allows lookup)"
 
-  artifacts:
-    output_folder: "reports/post_deploy_dns_smoke/"
-    required_files:
-      - "reports/post_deploy_dns_smoke/DNS_SMOKE_SUMMARY.md"
-      - "reports/post_deploy_dns_smoke/DNS_SMOKE_EVIDENCE.log"
-      - "reports/post_deploy_dns_smoke/DNS_SMOKE_RESULTS.json"
+artifacts:
+output_folder: "reports/post_deploy_dns_smoke/"
+required_files: - "reports/post_deploy_dns_smoke/DNS_SMOKE_SUMMARY.md" - "reports/post_deploy_dns_smoke/DNS_SMOKE_EVIDENCE.log" - "reports/post_deploy_dns_smoke/DNS_SMOKE_RESULTS.json"
 
-  global_pass_fail:
-    critical_failures:
-      - "Domain not delegated to Cloudflare (NS mismatch)"
-      - "TMA_FQDN or API_FQDN not resolving correctly"
-      - "HTTPS fails (525/526/SSL handshake issues)"
-      - "Redirect loop (too many redirects) on TMA or API"
-      - "API returns 520/522/523/524 consistently"
-      - "Webhook URL not reachable over HTTPS (Telegram cannot deliver updates)"
-    on_critical_fail:
-      - "State: DO NOT SHIP"
-      - "Recommend rollback if caused by a deploy; otherwise recommend DNS/SSL fixes"
-      - "Provide exact remediation steps + config diffs to apply in Cloudflare/Vercel/Registrar"
-    pass_condition:
-      - "All critical checks pass; important checks have no unresolved blockers."
+global_pass_fail:
+critical_failures: - "Domain not delegated to Cloudflare (NS mismatch)" - "TMA_FQDN or API_FQDN not resolving correctly" - "HTTPS fails (525/526/SSL handshake issues)" - "Redirect loop (too many redirects) on TMA or API" - "API returns 520/522/523/524 consistently" - "Webhook URL not reachable over HTTPS (Telegram cannot deliver updates)"
+on_critical_fail: - "State: DO NOT SHIP" - "Recommend rollback if caused by a deploy; otherwise recommend DNS/SSL fixes" - "Provide exact remediation steps + config diffs to apply in Cloudflare/Vercel/Registrar"
+pass_condition: - "All critical checks pass; important checks have no unresolved blockers."
 
-  commands_tooling:
-    required:
-      - "dig (or nslookup)"
-      - "curl"
-      - "openssl (for cert inspection)"
-    optional:
-      - "Cloudflare API via curl if API token is supplied"
+commands_tooling:
+required: - "dig (or nslookup)" - "curl" - "openssl (for cert inspection)"
+optional: - "Cloudflare API via curl if API token is supplied"
 
-  steps:
-    - step: 0
-      name: "Initialize + capture expectations"
-      actions:
-        - "Create artifacts folder/files and start timestamped logging."
-        - "Record inputs in DNS_SMOKE_RESULTS.json (redact token)."
-        - "Record current date/time and operator machine region (for latency context)."
-      outputs:
-        - "DNS_SMOKE_EVIDENCE.log begins with config snapshot."
+steps: - step: 0
+name: "Initialize + capture expectations"
+actions: - "Create artifacts folder/files and start timestamped logging." - "Record inputs in DNS_SMOKE_RESULTS.json (redact token)." - "Record current date/time and operator machine region (for latency context)."
+outputs: - "DNS_SMOKE_EVIDENCE.log begins with config snapshot."
 
     - step: 1
       name: "Nameserver delegation (NS) — critical"
@@ -237,34 +197,15 @@ POST_DEPLOY_SMOKE_DNS_CLOUDFLARE_ONLY_PROMPT:
         - "DNS_SMOKE_EVIDENCE.log"
         - "DNS_SMOKE_RESULTS.json"
 
-  known_failure_patterns_and_fast_diagnosis:
-    - pattern: "ERR_TOO_MANY_REDIRECTS"
-      likely_causes:
-        - "Conflicting redirect rules (Cloudflare + app)"
-        - "Always Use HTTPS + app http->https mismatch"
-      fix:
-        - "Remove one side; keep Cloudflare redirect rules simple and canonicalize once."
-    - pattern: "525 SSL handshake failed"
-      likely_causes:
-        - "Wrong DNS target/origin mismatch"
-        - "Origin TLS misconfigured (when not Pages/Workers)"
-      fix:
-        - "Verify DNS points to correct Cloudflare service; re-issue edge certs; verify SSL mode."
-    - pattern: "526 Invalid SSL certificate"
-      likely_causes:
-        - "Using Full (strict) to a non-valid origin cert"
-      fix:
-        - "Install valid origin cert or adjust SSL mode appropriately."
-    - pattern: "520/522/523/524"
-      likely_causes:
-        - "Route mismatch to Worker"
-        - "Origin unreachable (if not Workers)"
-      fix:
-        - "Verify Worker route bindings and DNS records."
+known_failure_patterns_and_fast_diagnosis: - pattern: "ERR_TOO_MANY_REDIRECTS"
+likely_causes: - "Conflicting redirect rules (Cloudflare + app)" - "Always Use HTTPS + app http->https mismatch"
+fix: - "Remove one side; keep Cloudflare redirect rules simple and canonicalize once." - pattern: "525 SSL handshake failed"
+likely_causes: - "Wrong DNS target/origin mismatch" - "Origin TLS misconfigured (when not Pages/Workers)"
+fix: - "Verify DNS points to correct Cloudflare service; re-issue edge certs; verify SSL mode." - pattern: "526 Invalid SSL certificate"
+likely_causes: - "Using Full (strict) to a non-valid origin cert"
+fix: - "Install valid origin cert or adjust SSL mode appropriately." - pattern: "520/522/523/524"
+likely_causes: - "Route mismatch to Worker" - "Origin unreachable (if not Workers)"
+fix: - "Verify Worker route bindings and DNS records."
 
-  final_output_contract:
-    must_state:
-      - "READY TO SHIP (DNS/TLS) or DO NOT SHIP"
-      - "Canonical TMA URL + canonical API URL"
-      - "Redirect map (from→to) for http/https and apex/www"
-      - "If not ready: exact remediation steps in priority order"
+final_output_contract:
+must_state: - "READY TO SHIP (DNS/TLS) or DO NOT SHIP" - "Canonical TMA URL + canonical API URL" - "Redirect map (from→to) for http/https and apex/www" - "If not ready: exact remediation steps in priority order"

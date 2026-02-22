@@ -17,10 +17,7 @@ authRoutes.post('/telegram', async (c) => {
 
   const validation = await validateInitData(parsed.initData, c.env.BOT_TOKEN);
   if (!validation.valid || !validation.user) {
-    return c.json(
-      { error: { code: 'UNAUTHORIZED', message: 'Invalid Telegram initData' } },
-      401,
-    );
+    return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid Telegram initData' } }, 401);
   }
 
   const tgUser = validation.user;
@@ -28,10 +25,7 @@ authRoutes.post('/telegram', async (c) => {
   // Rate limit auth attempts
   const rateResult = await checkRateLimit(c.env.DB, String(tgUser.id), 'auth');
   if (!rateResult.allowed) {
-    return c.json(
-      { error: { code: 'RATE_LIMITED', message: 'Too many auth attempts' } },
-      429,
-    );
+    return c.json({ error: { code: 'RATE_LIMITED', message: 'Too many auth attempts' } }, 429);
   }
 
   // Upsert user

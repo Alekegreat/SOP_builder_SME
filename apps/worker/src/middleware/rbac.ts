@@ -11,10 +11,7 @@ export function requirePermission(permission: Permission) {
   return async (c: Context<AppEnv>, next: Next) => {
     const auth = c.get('auth');
     if (!auth) {
-      return c.json(
-        { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
-        401,
-      );
+      return c.json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } }, 401);
     }
 
     // Get workspace ID from path params or query
@@ -24,10 +21,7 @@ export function requirePermission(permission: Permission) {
       (await extractWorkspaceIdFromBody(c));
 
     if (!workspaceId) {
-      return c.json(
-        { error: { code: 'BAD_REQUEST', message: 'workspaceId is required' } },
-        400,
-      );
+      return c.json({ error: { code: 'BAD_REQUEST', message: 'workspaceId is required' } }, 400);
     }
 
     // Lookup membership

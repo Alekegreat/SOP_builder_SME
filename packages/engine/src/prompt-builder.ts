@@ -208,14 +208,16 @@ export function generateMarkdown(content: Partial<SopContent>): string {
  * Removes common injection patterns while preserving legitimate content.
  */
 export function sanitizeInput(input: string): string {
-  return input
-    // Remove common injection markers
-    .replace(/```/g, "'''")
-    // Remove system/assistant role markers
-    .replace(/\b(system|assistant|user)\s*:/gi, '$1 -')
-    // Remove instruction-like patterns
-    .replace(/ignore\s+(previous|above|all)\s+(instructions?|prompts?|rules?)/gi, '[filtered]')
-    .replace(/forget\s+(everything|all|your)\s*/gi, '[filtered]')
-    // Keep the rest as-is
-    .trim();
+  return (
+    input
+      // Remove common injection markers
+      .replace(/```/g, "'''")
+      // Remove system/assistant role markers
+      .replace(/\b(system|assistant|user)\s*:/gi, '$1 -')
+      // Remove instruction-like patterns
+      .replace(/ignore\s+(previous|above|all)\s+(instructions?|prompts?|rules?)/gi, '[filtered]')
+      .replace(/forget\s+(everything|all|your)\s*/gi, '[filtered]')
+      // Keep the rest as-is
+      .trim()
+  );
 }

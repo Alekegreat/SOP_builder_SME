@@ -10,6 +10,7 @@
 ## 2) Provision Cloudflare resources
 
 Create:
+
 - Worker service for `apps/worker`
 - Worker service for `apps/queue-consumer`
 - D1 database (e.g. `sop-builder-db`)
@@ -20,7 +21,9 @@ Create:
 ## 3) Environment templates
 
 ### apps/worker
+
 Use `apps/worker/.env.example` and set as Worker secrets/vars:
+
 - `BOT_TOKEN`
 - `BOT_WEBHOOK_SECRET`
 - `JWT_SECRET`
@@ -31,10 +34,13 @@ Use `apps/worker/.env.example` and set as Worker secrets/vars:
 - optional Wallet Pay: `WALLETPAY_API_KEY`, `WALLETPAY_WEBHOOK_SECRET`
 
 ### apps/queue-consumer
+
 Use `apps/queue-consumer/.env.example`.
 
 ### apps/tma-web
+
 Use `apps/tma-web/.env.example`:
+
 - `VITE_API_URL=https://<worker-domain>`
 
 ## 4) Database migration

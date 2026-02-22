@@ -56,9 +56,7 @@ export function BillingPage() {
       {toast && (
         <div
           className={`mb-4 p-3 rounded-lg text-sm font-medium ${
-            toast.type === 'success'
-              ? 'bg-green-100 text-green-800'
-              : 'bg-red-100 text-red-800'
+            toast.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
           }`}
         >
           {toast.msg}
@@ -75,8 +73,13 @@ export function BillingPage() {
         </div>
         <div className="text-sm space-y-1 text-tg-hint">
           <p>Max SOPs: {entitlements.maxSops === -1 ? 'Unlimited' : entitlements.maxSops}</p>
-          <p>Max Members: {entitlements.maxMembers === -1 ? 'Unlimited' : entitlements.maxMembers}</p>
-          <p>AI Credits/mo: {entitlements.aiCreditsPerMonth === -1 ? 'Unlimited' : entitlements.aiCreditsPerMonth}</p>
+          <p>
+            Max Members: {entitlements.maxMembers === -1 ? 'Unlimited' : entitlements.maxMembers}
+          </p>
+          <p>
+            AI Credits/mo:{' '}
+            {entitlements.aiCreditsPerMonth === -1 ? 'Unlimited' : entitlements.aiCreditsPerMonth}
+          </p>
           <p>BYO Key: {entitlements.requiresByoKey ? 'Required' : 'Optional'}</p>
         </div>
       </div>
@@ -86,7 +89,10 @@ export function BillingPage() {
         <div className="bg-tg-secondary rounded-xl p-4 mb-4">
           <h2 className="font-semibold mb-2">This Month's Usage</h2>
           <div className="text-sm space-y-1 text-tg-hint">
-            <p>Credits Used: {usage.creditsUsed ?? 0} / {(usage.creditsIncluded ?? 0) + (usage.creditsBought ?? 0)}</p>
+            <p>
+              Credits Used: {usage.creditsUsed ?? 0} /{' '}
+              {(usage.creditsIncluded ?? 0) + (usage.creditsBought ?? 0)}
+            </p>
           </div>
         </div>
       )}
@@ -108,7 +114,10 @@ export function BillingPage() {
                 <span className="font-bold">{price === 0 ? 'Free' : `$${price / 100}/mo`}</span>
               </div>
               <div className="text-xs text-tg-hint space-y-0.5">
-                <p>{e.maxSops === -1 ? '∞' : e.maxSops} SOPs • {e.maxMembers === -1 ? '∞' : e.maxMembers} members</p>
+                <p>
+                  {e.maxSops === -1 ? '∞' : e.maxSops} SOPs •{' '}
+                  {e.maxMembers === -1 ? '∞' : e.maxMembers} members
+                </p>
                 <p>{e.aiCreditsPerMonth === -1 ? '∞' : e.aiCreditsPerMonth} AI credits/mo</p>
                 {e.diffs && <p>✓ Version diffs</p>}
                 {e.reviewCycles && <p>✓ Review cycles</p>}

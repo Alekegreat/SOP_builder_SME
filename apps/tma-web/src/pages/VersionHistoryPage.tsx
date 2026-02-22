@@ -29,7 +29,8 @@ export function VersionHistoryPage() {
   const right = versions.find((v) => v.id === (rightId || versions[0]?.id));
 
   const diff = useMemo(() => {
-    if (!left || !right) return { stepsAdded: [], stepsRemoved: [], checksAdded: [], checksRemoved: [] };
+    if (!left || !right)
+      return { stepsAdded: [], stepsRemoved: [], checksAdded: [], checksRemoved: [] };
 
     const leftSteps = new Set((left.contentJson?.steps ?? []).map((s) => s.text));
     const rightSteps = new Set((right.contentJson?.steps ?? []).map((s) => s.text));
@@ -51,14 +52,30 @@ export function VersionHistoryPage() {
       <h1 className="text-xl font-bold mb-4">Version History & Diff</h1>
 
       <div className="grid grid-cols-2 gap-2 mb-4">
-        <select title="Base version" aria-label="Base version" className="bg-tg-secondary rounded-lg px-2 py-2 text-sm" value={left?.id ?? ''} onChange={(e) => setLeftId(e.target.value)}>
+        <select
+          title="Base version"
+          aria-label="Base version"
+          className="bg-tg-secondary rounded-lg px-2 py-2 text-sm"
+          value={left?.id ?? ''}
+          onChange={(e) => setLeftId(e.target.value)}
+        >
           {versions.map((v) => (
-            <option key={v.id} value={v.id}>{v.semver}</option>
+            <option key={v.id} value={v.id}>
+              {v.semver}
+            </option>
           ))}
         </select>
-        <select title="Compare version" aria-label="Compare version" className="bg-tg-secondary rounded-lg px-2 py-2 text-sm" value={right?.id ?? ''} onChange={(e) => setRightId(e.target.value)}>
+        <select
+          title="Compare version"
+          aria-label="Compare version"
+          className="bg-tg-secondary rounded-lg px-2 py-2 text-sm"
+          value={right?.id ?? ''}
+          onChange={(e) => setRightId(e.target.value)}
+        >
           {versions.map((v) => (
-            <option key={v.id} value={v.id}>{v.semver}</option>
+            <option key={v.id} value={v.id}>
+              {v.semver}
+            </option>
           ))}
         </select>
       </div>
@@ -75,10 +92,14 @@ function DiffList({ title, items, tone }: { title: string; items: string[]; tone
   return (
     <div className="bg-tg-secondary rounded-xl p-3 mb-2">
       <p className="font-medium mb-1">{title}</p>
-      {items.length === 0 ? <p className="text-xs text-tg-hint">No changes</p> : (
+      {items.length === 0 ? (
+        <p className="text-xs text-tg-hint">No changes</p>
+      ) : (
         <ul className="list-disc pl-5 text-sm">
           {items.map((item) => (
-            <li key={`${title}-${item}`} className={tone}>{item}</li>
+            <li key={`${title}-${item}`} className={tone}>
+              {item}
+            </li>
           ))}
         </ul>
       )}

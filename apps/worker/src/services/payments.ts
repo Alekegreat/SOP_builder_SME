@@ -12,9 +12,7 @@ export async function isPaymentProcessed(
   externalId: string,
 ): Promise<boolean> {
   const existing = await db
-    .prepare(
-      'SELECT id FROM payment_events WHERE provider = ? AND external_id = ?',
-    )
+    .prepare('SELECT id FROM payment_events WHERE provider = ? AND external_id = ?')
     .bind(provider, externalId)
     .first();
 
@@ -38,9 +36,7 @@ export async function recordPaymentEvent(
 ): Promise<{ created: boolean; id: string }> {
   // Check for duplicate
   const existing = await db
-    .prepare(
-      'SELECT id FROM payment_events WHERE provider = ? AND external_id = ?',
-    )
+    .prepare('SELECT id FROM payment_events WHERE provider = ? AND external_id = ?')
     .bind(event.provider, event.externalId)
     .first<{ id: string }>();
 
@@ -87,9 +83,7 @@ export async function resolveWorkspaceForUser(
   if (!user) return null;
 
   const membership = await db
-    .prepare(
-      `SELECT workspace_id FROM memberships WHERE user_id = ? AND role = 'owner' LIMIT 1`,
-    )
+    .prepare(`SELECT workspace_id FROM memberships WHERE user_id = ? AND role = 'owner' LIMIT 1`)
     .bind(user.id)
     .first<{ workspace_id: string }>();
 
@@ -115,7 +109,12 @@ export async function validateWalletPaySignature(
     );
 
     const sigBytes = hexToBytes(signature);
-    return await crypto.subtle.verify('HMAC', key, sigBytes.buffer as ArrayBuffer, encoder.encode(body));
+    return await crypto.subtle.verify(
+      'HMAC',
+      key,
+      sigBytes.buffer as ArrayBuffer,
+      encoder.encode(body),
+    );
   } catch {
     return false;
   }

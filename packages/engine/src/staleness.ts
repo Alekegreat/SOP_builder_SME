@@ -71,10 +71,9 @@ export function needsReminder(staleness: StalenessResult): boolean {
 /**
  * Get SOPs that need reminders from a batch
  */
-export function filterStaleSOPs<T extends { lastVersionCreatedAt: string; reviewCycleDays?: number }>(
-  sops: T[],
-  now: Date = new Date(),
-): Array<T & { staleness: StalenessResult }> {
+export function filterStaleSOPs<
+  T extends { lastVersionCreatedAt: string; reviewCycleDays?: number },
+>(sops: T[], now: Date = new Date()): Array<T & { staleness: StalenessResult }> {
   return sops
     .map((sop) => ({
       ...sop,

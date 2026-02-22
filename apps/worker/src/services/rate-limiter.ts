@@ -24,18 +24,14 @@ export async function checkRateLimit(
 
   // Get current count in window
   const result = await db
-    .prepare(
-      'SELECT count, window_start FROM rate_limits WHERE key = ?',
-    )
+    .prepare('SELECT count, window_start FROM rate_limits WHERE key = ?')
     .bind(key)
     .first<{ count: number; window_start: number }>();
 
   if (!result || result.window_start < windowStart) {
     // New window or expired — reset
     await db
-      .prepare(
-        'INSERT OR REPLACE INTO rate_limits (key, window_start, count) VALUES (?, ?, 1)',
-      )
+      .prepare('INSERT OR REPLACE INTO rate_limits (key, window_start, count) VALUES (?, ?, 1)')
       .bind(key, now)
       .run();
 
@@ -55,10 +51,7 @@ export async function checkRateLimit(
   }
 
   // Increment
-  await db
-    .prepare('UPDATE rate_limits SET count = count + 1 WHERE key = ?')
-    .bind(key)
-    .run();
+  await db.prepare('UPDATE rate_limits SET count = count + 1 WHERE key = ?').bind(key).run();
 
   return {
     allowed: true,

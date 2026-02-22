@@ -69,9 +69,7 @@ export async function queryAuditLogs(
     .first<{ total: number }>();
 
   const logs = await db
-    .prepare(
-      `SELECT * FROM audit_logs ${whereClause} ORDER BY at DESC LIMIT ? OFFSET ?`,
-    )
+    .prepare(`SELECT * FROM audit_logs ${whereClause} ORDER BY at DESC LIMIT ? OFFSET ?`)
     .bind(...params, limit, offset)
     .all<AuditLogRow>();
 

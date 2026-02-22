@@ -1,88 +1,52 @@
 id: "POST_DEPLOY_SMOKE_PROMPT_CLOUDFLARE_ONLY_V1"
 POST_DEPLOY_SMOKE_PROMPT:
-  role: >
-    Act as Senior DevOps + Senior QA + Senior Security Engineer.
-    Run a production post-deploy smoke verification for the SOP Builder system deployed on Cloudflare Pages + Workers + D1 + R2 + Queues.
-    Be strict: fail fast, produce evidence, and recommend rollback when necessary.
+role: >
+Act as Senior DevOps + Senior QA + Senior Security Engineer.
+Run a production post-deploy smoke verification for the SOP Builder system deployed on Cloudflare Pages + Workers + D1 + R2 + Queues.
+Be strict: fail fast, produce evidence, and recommend rollback when necessary.
 
-  scope:
-    environment: "PRODUCTION"
-    contract: "Local → Preview → Production (no staging)"
-    hard_constraints:
-      - "No destructive tests on production data except in a dedicated test workspace."
-      - "No leaking secrets in logs or outputs."
-      - "All checks must be reproducible via commands + recorded outputs."
+scope:
+environment: "PRODUCTION"
+contract: "Local → Preview → Production (no staging)"
+hard_constraints: - "No destructive tests on production data except in a dedicated test workspace." - "No leaking secrets in logs or outputs." - "All checks must be reproducible via commands + recorded outputs."
 
-  inputs_required_from_operator:
-    # The agent must ask the operator ONLY for these, then proceed.
-    - name: PROD_TMA_URL
-      example: "https://<project>.pages.dev or https://app.<domain>"
-    - name: PROD_API_URL
-      example: "https://<worker>.<account>.workers.dev or https://api.<domain>"
-    - name: PROD_DOMAIN
-      example: "app.<domain> (optional if using pages.dev only)"
-    - name: TELEGRAM_BOT_USERNAME
-      example: "@YourSOPBot"
-    - name: TELEGRAM_TEST_USER_ID
-      example: "numeric telegram user id used for smoke"
-    - name: TELEGRAM_ADMIN_USER_ID
-      example: "numeric telegram user id as owner/admin"
-    - name: FEATURE_FLAGS
-      example: |
-        {
-          "PAYMENTS_AUTOMATED": false,
-          "SERVER_PDF_EXPORT": false
-        }
-    - name: OPTIONAL_PAYMENT_TEST_MODE
-      example: |
-        {
-          "STARS": "manual",
-          "WALLETPAY": "manual",
-          "TON": "manual"
-        }
+inputs_required_from_operator: # The agent must ask the operator ONLY for these, then proceed. - name: PROD_TMA_URL
+example: "https://<project>.pages.dev or https://app.<domain>" - name: PROD_API_URL
+example: "https://<worker>.<account>.workers.dev or https://api.<domain>" - name: PROD_DOMAIN
+example: "app.<domain> (optional if using pages.dev only)" - name: TELEGRAM_BOT_USERNAME
+example: "@YourSOPBot" - name: TELEGRAM_TEST_USER_ID
+example: "numeric telegram user id used for smoke" - name: TELEGRAM_ADMIN_USER_ID
+example: "numeric telegram user id as owner/admin" - name: FEATURE_FLAGS
+example: |
+{
+"PAYMENTS_AUTOMATED": false,
+"SERVER_PDF_EXPORT": false
+} - name: OPTIONAL_PAYMENT_TEST_MODE
+example: |
+{
+"STARS": "manual",
+"WALLETPAY": "manual",
+"TON": "manual"
+}
 
-  artifacts:
-    output_folder: "reports/post_deploy_smoke/"
-    required_files:
-      - "reports/post_deploy_smoke/SMOKE_SUMMARY.md"
-      - "reports/post_deploy_smoke/SMOKE_EVIDENCE.log"
-      - "reports/post_deploy_smoke/SMOKE_CHECKLIST.json"
+artifacts:
+output_folder: "reports/post_deploy_smoke/"
+required_files: - "reports/post_deploy_smoke/SMOKE_SUMMARY.md" - "reports/post_deploy_smoke/SMOKE_EVIDENCE.log" - "reports/post_deploy_smoke/SMOKE_CHECKLIST.json"
 
-  global_pass_fail:
-    pass_condition: "All critical checks pass."
-    fail_condition: "Any critical check fails OR security regression indicates exploitable path."
-    on_fail:
-      - "Recommend immediate rollback to previous known-good Worker/Pages deployments."
-      - "Disable risky feature flags (PAYMENTS_AUTOMATED, PUBLISH_WITHOUT_APPROVAL, etc.)."
-      - "Open incident doc entry with exact failing step + evidence."
+global_pass_fail:
+pass_condition: "All critical checks pass."
+fail_condition: "Any critical check fails OR security regression indicates exploitable path."
+on_fail: - "Recommend immediate rollback to previous known-good Worker/Pages deployments." - "Disable risky feature flags (PAYMENTS_AUTOMATED, PUBLISH_WITHOUT_APPROVAL, etc.)." - "Open incident doc entry with exact failing step + evidence."
 
-  check_levels:
-    critical:
-      - "DNS/TLS/HTTPS reachable"
-      - "API health + auth working"
-      - "Bot webhook working"
-      - "RBAC enforced server-side"
-      - "Approval policy enforced"
-      - "Job queue processing works"
-      - "Payment webhook idempotency (even in manual mode) works"
-    important:
-      - "Rate limiting active"
-      - "Audit log writes"
-      - "R2 read/write for exports/attachments (if enabled)"
-      - "Cron reminders enabled (or explicitly disabled by feature flag)"
-    optional:
-      - "Server PDF export (if enabled)"
-      - "Onchain TON confirmation automation (if enabled)"
+check_levels:
+critical: - "DNS/TLS/HTTPS reachable" - "API health + auth working" - "Bot webhook working" - "RBAC enforced server-side" - "Approval policy enforced" - "Job queue processing works" - "Payment webhook idempotency (even in manual mode) works"
+important: - "Rate limiting active" - "Audit log writes" - "R2 read/write for exports/attachments (if enabled)" - "Cron reminders enabled (or explicitly disabled by feature flag)"
+optional: - "Server PDF export (if enabled)" - "Onchain TON confirmation automation (if enabled)"
 
-  steps:
-    - step: 0
-      name: "Initialize smoke workspace + logging"
-      actions:
-        - "Create output files and start logging timestamps."
-        - "Record deploy identifiers (Git SHA, CF deployment ID if available)."
-        - "Confirm FEATURE_FLAGS and payment mode."
-      evidence:
-        - "Write config snapshot into SMOKE_CHECKLIST.json."
+steps: - step: 0
+name: "Initialize smoke workspace + logging"
+actions: - "Create output files and start logging timestamps." - "Record deploy identifiers (Git SHA, CF deployment ID if available)." - "Confirm FEATURE_FLAGS and payment mode."
+evidence: - "Write config snapshot into SMOKE_CHECKLIST.json."
 
     - step: 1
       name: "DNS + TLS + HTTP basics (critical)"
@@ -234,33 +198,15 @@ POST_DEPLOY_SMOKE_PROMPT:
         - "Rollback instructions are explicit and actionable."
       fail_fast: true
 
-  tooling_guidance:
-    preferred:
-      - "curl"
-      - "Playwright smoke test (minimal) hitting PROD URLs"
-      - "wrangler tail (manual) for log review"
-    required_redaction:
-      - "Never print bot token, initData, encryption keys, payment secrets."
+tooling_guidance:
+preferred: - "curl" - "Playwright smoke test (minimal) hitting PROD URLs" - "wrangler tail (manual) for log review"
+required_redaction: - "Never print bot token, initData, encryption keys, payment secrets."
 
-  output_requirements:
-    SMOKE_SUMMARY_md_must_include:
-      - "Exact URLs tested"
-      - "Feature flags"
-      - "Test workspace identifiers"
-      - "Pass/fail per step with timestamps"
-      - "Rollback recommendation (even if pass, state rollback path)"
-    SMOKE_EVIDENCE_log_must_include:
-      - "curl outputs (headers + status)"
-      - "API responses with sensitive parts redacted"
-      - "Playwright run summary"
-    SMOKE_CHECKLIST_json_must_include:
-      - "step_results[] with pass/fail, evidence pointers, and notes"
+output_requirements:
+SMOKE_SUMMARY_md_must_include: - "Exact URLs tested" - "Feature flags" - "Test workspace identifiers" - "Pass/fail per step with timestamps" - "Rollback recommendation (even if pass, state rollback path)"
+SMOKE_EVIDENCE_log_must_include: - "curl outputs (headers + status)" - "API responses with sensitive parts redacted" - "Playwright run summary"
+SMOKE_CHECKLIST_json_must_include: - "step_results[] with pass/fail, evidence pointers, and notes"
 
-  final_acceptance_statement:
-    when_all_pass:
-      - "State: READY FOR USERS"
-      - "List any known limitations (e.g., payments manual mode)"
-    when_any_fail:
-      - "State: DO NOT SHIP"
-      - "Top 3 root causes suspected + immediate mitigations"
-      - "Rollback plan"
+final_acceptance_statement:
+when_all_pass: - "State: READY FOR USERS" - "List any known limitations (e.g., payments manual mode)"
+when_any_fail: - "State: DO NOT SHIP" - "Top 3 root causes suspected + immediate mitigations" - "Rollback plan"

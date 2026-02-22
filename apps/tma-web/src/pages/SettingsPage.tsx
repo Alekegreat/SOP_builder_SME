@@ -1,11 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../stores/authStore.js';
-import {
-  getWorkspaceSettings,
-  updateWorkspaceSettings,
-  updateAiConfig,
-} from '../lib/api.js';
+import { getWorkspaceSettings, updateWorkspaceSettings, updateAiConfig } from '../lib/api.js';
 import { LoadingSpinner } from '../components/LoadingSpinner.js';
 
 export function SettingsPage() {
@@ -87,9 +83,7 @@ export function SettingsPage() {
       {toast && (
         <div
           className={`mb-4 p-3 rounded-lg text-sm font-medium ${
-            toast.type === 'success'
-              ? 'bg-green-100 text-green-800'
-              : 'bg-red-100 text-red-800'
+            toast.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
           }`}
         >
           {toast.msg}

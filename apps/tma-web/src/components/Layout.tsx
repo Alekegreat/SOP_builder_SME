@@ -24,9 +24,9 @@ export function Layout({ children }: LayoutProps) {
       <nav className="fixed bottom-0 left-0 right-0 bg-tg-secondary border-t border-tg-hint/20">
         <div className="flex justify-around items-center h-14">
           {NAV_ITEMS.map((item) => {
-            const isActive = location.pathname === item.path ||
+            const isActive =
+              location.pathname === item.path ||
               (item.path !== '/' && location.pathname.startsWith(item.path));
-
 
             return (
               <Link

@@ -73,7 +73,9 @@ export function RolesPage() {
             className="w-full bg-tg-bg rounded-lg px-3 py-2 text-sm outline-none mb-3"
           >
             {WORKSPACE_ROLES.map((r) => (
-              <option key={r} value={r}>{r}</option>
+              <option key={r} value={r}>
+                {r}
+              </option>
             ))}
           </select>
           <div className="flex gap-2">
@@ -105,23 +107,26 @@ export function RolesPage() {
       ) : (
         <div className="space-y-2">
           {members.map((m) => (
-            <div key={m.user_id} className="bg-tg-secondary rounded-xl p-3 flex items-center justify-between">
+            <div
+              key={m.user_id}
+              className="bg-tg-secondary rounded-xl p-3 flex items-center justify-between"
+            >
               <div>
                 <p className="font-medium">{m.name}</p>
                 <p className="text-xs text-tg-hint">TG: {m.telegram_user_id}</p>
               </div>
               <select
                 value={m.role}
-                onChange={(e) =>
-                  roleMutation.mutate({ userId: m.user_id, role: e.target.value })
-                }
+                onChange={(e) => roleMutation.mutate({ userId: m.user_id, role: e.target.value })}
                 title={`Role for ${m.name}`}
                 aria-label={`Role for ${m.name}`}
                 disabled={roleMutation.isPending}
                 className="bg-tg-bg rounded-lg px-2 py-1 text-sm outline-none"
               >
                 {WORKSPACE_ROLES.map((r) => (
-                  <option key={r} value={r}>{r}</option>
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
                 ))}
               </select>
             </div>

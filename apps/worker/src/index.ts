@@ -53,9 +53,7 @@ async function handleScheduled(_event: ScheduledEvent, env: Env): Promise<void> 
 
     // Cleanup expired rate limits
     const threshold = Math.floor(Date.now() / 1000) - 120;
-    await env.DB.prepare('DELETE FROM rate_limits WHERE window_start < ?')
-      .bind(threshold)
-      .run();
+    await env.DB.prepare('DELETE FROM rate_limits WHERE window_start < ?').bind(threshold).run();
   } catch (err) {
     console.error('Scheduled job error:', err);
   }

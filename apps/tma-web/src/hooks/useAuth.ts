@@ -10,7 +10,8 @@ export function useAuth() {
     async function init() {
       try {
         // Get initData from Telegram WebApp
-        const tg = (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram?.WebApp;
+        const tg = (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram
+          ?.WebApp;
         const initData = tg?.initData;
 
         if (!initData) {

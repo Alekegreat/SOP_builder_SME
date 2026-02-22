@@ -157,19 +157,23 @@ export const InterviewAnswerSchema = z.object({
 
 export const InterviewStartResponseSchema = z.object({
   sessionId: z.string(),
-  nextQuestion: z.object({
-    key: z.string(),
-    question: z.string(),
-    required: z.boolean(),
-  }).nullable(),
+  nextQuestion: z
+    .object({
+      key: z.string(),
+      question: z.string(),
+      required: z.boolean(),
+    })
+    .nullable(),
 });
 
 export const InterviewAnswerResponseSchema = z.object({
-  nextQuestion: z.object({
-    key: z.string(),
-    question: z.string(),
-    required: z.boolean(),
-  }).nullable(),
+  nextQuestion: z
+    .object({
+      key: z.string(),
+      question: z.string(),
+      required: z.boolean(),
+    })
+    .nullable(),
   isComplete: z.boolean(),
 });
 
@@ -229,22 +233,28 @@ export const BillingPlanResponseSchema = z.object({
 
 export const StarsWebhookSchema = z.object({
   update_id: z.number(),
-  pre_checkout_query: z.object({
-    id: z.string(),
-    from: z.object({ id: z.number() }),
-    currency: z.string(),
-    total_amount: z.number(),
-    invoice_payload: z.string(),
-  }).optional(),
-  message: z.object({
-    successful_payment: z.object({
+  pre_checkout_query: z
+    .object({
+      id: z.string(),
+      from: z.object({ id: z.number() }),
       currency: z.string(),
       total_amount: z.number(),
       invoice_payload: z.string(),
-      telegram_payment_charge_id: z.string(),
-      provider_payment_charge_id: z.string(),
-    }).optional(),
-  }).optional(),
+    })
+    .optional(),
+  message: z
+    .object({
+      successful_payment: z
+        .object({
+          currency: z.string(),
+          total_amount: z.number(),
+          invoice_payload: z.string(),
+          telegram_payment_charge_id: z.string(),
+          provider_payment_charge_id: z.string(),
+        })
+        .optional(),
+    })
+    .optional(),
 });
 
 export const WalletPayWebhookSchema = z.object({

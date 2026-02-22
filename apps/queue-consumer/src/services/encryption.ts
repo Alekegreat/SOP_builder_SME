@@ -17,11 +17,7 @@ export async function decrypt(encryptedHex: string, keyHex: string): Promise<str
     ['decrypt'],
   );
 
-  const plainBuf = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv },
-    cryptoKey,
-    ciphertext,
-  );
+  const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, cryptoKey, ciphertext);
 
   return new TextDecoder().decode(plainBuf);
 }

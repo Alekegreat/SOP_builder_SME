@@ -35,11 +35,7 @@ export async function decrypt(encryptedHex: string, keyHex: string): Promise<str
   const iv = combined.slice(0, 12);
   const ciphertext = combined.slice(12);
 
-  const plaintext = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv },
-    key,
-    ciphertext,
-  );
+  const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
 
   return new TextDecoder().decode(plaintext);
 }
@@ -52,7 +48,7 @@ async function importKey(keyHex: string): Promise<CryptoKey> {
   if (keyData.length !== 32) {
     throw new Error('Encryption key must be 32 bytes (256 bits) in hex format');
   }
-    return crypto.subtle.importKey('raw', keyData.buffer as ArrayBuffer, { name: 'AES-GCM' }, false, [
+  return crypto.subtle.importKey('raw', keyData.buffer as ArrayBuffer, { name: 'AES-GCM' }, false, [
     'encrypt',
     'decrypt',
   ]);

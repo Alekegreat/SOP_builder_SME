@@ -8,15 +8,17 @@ import { ZodError } from 'zod';
  */
 export function errorHandler(err: Error, c: Context<AppEnv>) {
   // Structured error logging
-  console.error(JSON.stringify({
-    level: 'error',
-    message: err.message,
-    name: err.name,
-    stack: err.stack?.substring(0, 500),
-    url: c.req.url,
-    method: c.req.method,
-    timestamp: new Date().toISOString(),
-  }));
+  console.error(
+    JSON.stringify({
+      level: 'error',
+      message: err.message,
+      name: err.name,
+      stack: err.stack?.substring(0, 500),
+      url: c.req.url,
+      method: c.req.method,
+      timestamp: new Date().toISOString(),
+    }),
+  );
 
   if (err instanceof RBACError) {
     return c.json(
@@ -45,24 +47,15 @@ export function errorHandler(err: Error, c: Context<AppEnv>) {
   }
 
   if (err.message.includes('NOT_FOUND') || err.message.includes('not found')) {
-    return c.json(
-      { error: { code: 'NOT_FOUND', message: err.message } },
-      404,
-    );
+    return c.json({ error: { code: 'NOT_FOUND', message: err.message } }, 404);
   }
 
   if (err.message.includes('RATE_LIMITED')) {
-    return c.json(
-      { error: { code: 'RATE_LIMITED', message: 'Too many requests' } },
-      429,
-    );
+    return c.json({ error: { code: 'RATE_LIMITED', message: 'Too many requests' } }, 429);
   }
 
   if (err.message.includes('CONFLICT') || err.message.includes('already exists')) {
-    return c.json(
-      { error: { code: 'CONFLICT', message: err.message } },
-      409,
-    );
+    return c.json({ error: { code: 'CONFLICT', message: err.message } }, 409);
   }
 
   // Default 500

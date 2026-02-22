@@ -1,6 +1,13 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getSop, listVersions, generateSop, publishVersion, deleteSop, exportSop } from '../lib/api.js';
+import {
+  getSop,
+  listVersions,
+  generateSop,
+  publishVersion,
+  deleteSop,
+  exportSop,
+} from '../lib/api.js';
 import { LoadingSpinner } from '../components/LoadingSpinner.js';
 
 export function SopDetailPage() {
@@ -62,7 +69,8 @@ export function SopDetailPage() {
         <div>
           <h1 className="text-xl font-bold">{sop.title as string}</h1>
           <p className="text-xs text-tg-hint">
-            Status: {sop.status as string} | Created: {new Date(sop.created_at as string).toLocaleDateString()}
+            Status: {sop.status as string} | Created:{' '}
+            {new Date(sop.created_at as string).toLocaleDateString()}
           </p>
         </div>
       </div>

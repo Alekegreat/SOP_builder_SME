@@ -129,12 +129,7 @@ export const WORKSPACE_ROLES = ['owner', 'admin', 'editor', 'approver', 'viewer'
 export type WorkspaceRole = (typeof WORKSPACE_ROLES)[number];
 
 // ── Interview states ──
-export const INTERVIEW_STATES = [
-  'NOT_STARTED',
-  'IN_PROGRESS',
-  'COMPLETED',
-  'CANCELLED',
-] as const;
+export const INTERVIEW_STATES = ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const;
 export type InterviewState = (typeof INTERVIEW_STATES)[number];
 
 // ── Payment providers ──
@@ -199,8 +194,7 @@ export const INTERVIEW_QUESTIONS = [
   },
   {
     key: 'scope',
-    question:
-      'What is the scope? Which teams, departments, or processes does this SOP cover?',
+    question: 'What is the scope? Which teams, departments, or processes does this SOP cover?',
     required: true,
   },
   {
@@ -233,8 +227,7 @@ export const INTERVIEW_QUESTIONS = [
   },
   {
     key: 'checklist',
-    question:
-      'What checklist items should someone verify after completing this process?',
+    question: 'What checklist items should someone verify after completing this process?',
     required: true,
   },
   {
@@ -254,8 +247,7 @@ export const INTERVIEW_QUESTIONS = [
   },
   {
     key: 'references',
-    question:
-      'Any references, links, or related documents? Type "none" if there are none.',
+    question: 'Any references, links, or related documents? Type "none" if there are none.',
     required: false,
   },
 ] as const;

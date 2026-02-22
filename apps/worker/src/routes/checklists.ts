@@ -25,10 +25,14 @@ checklistRoutes.post('/:id/complete', async (c) => {
   const run = await c.env.DB.prepare('SELECT * FROM checklist_runs WHERE id = ?')
     .bind(runId)
     .first();
-  if (!run) return c.json({ error: { code: 'NOT_FOUND', message: 'Checklist run not found' } }, 404);
+  if (!run)
+    return c.json({ error: { code: 'NOT_FOUND', message: 'Checklist run not found' } }, 404);
 
   if (run.user_id !== auth.userId) {
-    return c.json({ error: { code: 'FORBIDDEN', message: 'Can only complete your own checklist run' } }, 403);
+    return c.json(
+      { error: { code: 'FORBIDDEN', message: 'Can only complete your own checklist run' } },
+      403,
+    );
   }
 
   if (run.completed_at) {
@@ -41,9 +45,7 @@ checklistRoutes.post('/:id/complete', async (c) => {
   if (!sop) return c.json({ error: { code: 'NOT_FOUND', message: 'SOP not found' } }, 404);
 
   const now = new Date().toISOString();
-  await c.env.DB.prepare(
-    'UPDATE checklist_runs SET completed_at = ?, items_json = ? WHERE id = ?',
-  )
+  await c.env.DB.prepare('UPDATE checklist_runs SET completed_at = ?, items_json = ? WHERE id = ?')
     .bind(now, JSON.stringify(parsed.items), runId)
     .run();
 

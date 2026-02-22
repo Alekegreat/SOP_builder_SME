@@ -59,7 +59,9 @@ export function SopListPage() {
         >
           <option value="">All</option>
           {Object.values(SOP_STATUSES).map((s) => (
-            <option key={s} value={s}>{s}</option>
+            <option key={s} value={s}>
+              {s}
+            </option>
           ))}
         </select>
       </div>
@@ -140,7 +142,10 @@ function CreateSopModal({
       createSop({
         workspaceId,
         title,
-        tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+        tags: tags
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean),
       }),
     onSuccess: onCreated,
   });

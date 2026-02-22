@@ -8,7 +8,10 @@ import { JWT_EXPIRY_SECONDS, INIT_DATA_MAX_AGE_SECONDS } from '@sop/shared';
 export async function validateInitData(
   initData: string,
   botToken: string,
-): Promise<{ valid: boolean; user?: { id: number; first_name: string; last_name?: string; username?: string } }> {
+): Promise<{
+  valid: boolean;
+  user?: { id: number; first_name: string; last_name?: string; username?: string };
+}> {
   try {
     const params = new URLSearchParams(initData);
     const hash = params.get('hash');
@@ -47,7 +50,11 @@ export async function validateInitData(
       false,
       ['sign'],
     );
-    const signature = await crypto.subtle.sign('HMAC', validationKey, encoder.encode(dataCheckString));
+    const signature = await crypto.subtle.sign(
+      'HMAC',
+      validationKey,
+      encoder.encode(dataCheckString),
+    );
 
     const computedHash = Array.from(new Uint8Array(signature))
       .map((b) => b.toString(16).padStart(2, '0'))
@@ -132,7 +139,12 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
     );
 
     const signatureBuffer = base64UrlDecodeToBuffer(encodedSignature);
-    const valid = await crypto.subtle.verify('HMAC', key, signatureBuffer, encoder.encode(signingInput));
+    const valid = await crypto.subtle.verify(
+      'HMAC',
+      key,
+      signatureBuffer,
+      encoder.encode(signingInput),
+    );
 
     if (!valid) return null;
 
@@ -156,7 +168,10 @@ function base64UrlEncode(str: string): string {
 }
 
 function base64UrlEncodeBuffer(buffer: ArrayBuffer | ArrayBufferView): string {
-  const bytes = buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+  const bytes =
+    buffer instanceof ArrayBuffer
+      ? new Uint8Array(buffer)
+      : new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
   let binary = '';
   for (const byte of bytes) {
     binary += String.fromCharCode(byte);

@@ -1,8 +1,8 @@
 {
-    "chat.tools.terminal.autoApprove": {
-        "/^pnpm install$/": {
-            "approve": true,
-            "matchCommandLine": true
-        }
+  "chat.tools.terminal.autoApprove": {
+    "/^pnpm install$/": {
+      "approve": true,
+      "matchCommandLine": true
     }
+  }
 }

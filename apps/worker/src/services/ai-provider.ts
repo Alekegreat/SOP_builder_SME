@@ -105,7 +105,7 @@ class OpenAICompatibleProvider implements AiProvider {
       throw new Error(`AI provider error (${response.status}): ${error}`);
     }
 
-    const data = await response.json() as {
+    const data = (await response.json()) as {
       choices: Array<{ message: { content: string } }>;
     };
 

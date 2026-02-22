@@ -15,13 +15,15 @@ export async function loggerMiddleware(c: Context<AppEnv>, next: Next) {
   const path = new URL(c.req.url).pathname;
   if (path === '/health' || path === '/favicon.ico') return;
 
-  console.log(JSON.stringify({
-    level: 'info',
-    method: c.req.method,
-    path,
-    status: c.res.status,
-    duration,
-    userId: c.get('auth')?.userId,
-    timestamp: new Date().toISOString(),
-  }));
+  console.log(
+    JSON.stringify({
+      level: 'info',
+      method: c.req.method,
+      path,
+      status: c.res.status,
+      duration,
+      userId: c.get('auth')?.userId,
+      timestamp: new Date().toISOString(),
+    }),
+  );
 }
