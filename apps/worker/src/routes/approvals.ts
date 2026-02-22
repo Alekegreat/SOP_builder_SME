@@ -64,9 +64,7 @@ approvalRoutes.post('/', async (c) => {
   assertPermission(role, 'approval:create');
 
   // Check version exists
-  const version = await c.env.DB.prepare(
-    'SELECT id FROM sop_versions WHERE id = ? AND sop_id = ?',
-  )
+  const version = await c.env.DB.prepare('SELECT id FROM sop_versions WHERE id = ? AND sop_id = ?')
     .bind(parsed.versionId, parsed.sopId)
     .first();
   if (!version) {
@@ -81,7 +79,10 @@ approvalRoutes.post('/', async (c) => {
     .first<{ role: string }>();
 
   if (!approverMembership) {
-    return c.json({ error: { code: 'BAD_REQUEST', message: 'Approver is not a workspace member' } }, 400);
+    return c.json(
+      { error: { code: 'BAD_REQUEST', message: 'Approver is not a workspace member' } },
+      400,
+    );
   }
 
   const id = crypto.randomUUID();
@@ -103,16 +104,23 @@ approvalRoutes.post('/', async (c) => {
     action: 'approval.requested',
     entityType: 'approval',
     entityId: id,
-    meta: { sopId: parsed.sopId, versionId: parsed.versionId, approverUserId: parsed.approverUserId },
+    meta: {
+      sopId: parsed.sopId,
+      versionId: parsed.versionId,
+      approverUserId: parsed.approverUserId,
+    },
   });
 
-  return c.json({
-    id,
-    sopId: parsed.sopId,
-    versionId: parsed.versionId,
-    state: 'PENDING',
-    approverUserId: parsed.approverUserId,
-  }, 201);
+  return c.json(
+    {
+      id,
+      sopId: parsed.sopId,
+      versionId: parsed.versionId,
+      state: 'PENDING',
+      approverUserId: parsed.approverUserId,
+    },
+    201,
+  );
 });
 
 /**
@@ -127,14 +135,21 @@ approvalRoutes.post('/:id/decide', async (c) => {
   const approval = await c.env.DB.prepare('SELECT * FROM approvals WHERE id = ?')
     .bind(approvalId)
     .first();
-  if (!approval) return c.json({ error: { code: 'NOT_FOUND', message: 'Approval not found' } }, 404);
+  if (!approval)
+    return c.json({ error: { code: 'NOT_FOUND', message: 'Approval not found' } }, 404);
 
   if (approval.state !== 'PENDING') {
-    return c.json({ error: { code: 'CONFLICT', message: 'Approval has already been decided' } }, 409);
+    return c.json(
+      { error: { code: 'CONFLICT', message: 'Approval has already been decided' } },
+      409,
+    );
   }
 
   if (approval.approver_user_id !== auth.userId) {
-    return c.json({ error: { code: 'FORBIDDEN', message: 'Only the assigned approver can decide' } }, 403);
+    return c.json(
+      { error: { code: 'FORBIDDEN', message: 'Only the assigned approver can decide' } },
+      403,
+    );
   }
 
   const sop = await c.env.DB.prepare('SELECT workspace_id FROM sops WHERE id = ?')
@@ -146,9 +161,7 @@ approvalRoutes.post('/:id/decide', async (c) => {
   assertPermission(role, 'approval:decide');
 
   const now = new Date().toISOString();
-  await c.env.DB.prepare(
-    'UPDATE approvals SET state = ?, decided_at = ?, comment = ? WHERE id = ?',
-  )
+  await c.env.DB.prepare('UPDATE approvals SET state = ?, decided_at = ?, comment = ? WHERE id = ?')
     .bind(parsed.decision, now, parsed.comment ?? null, approvalId)
     .run();
 
@@ -169,6 +182,31 @@ approvalRoutes.post('/:id/decide', async (c) => {
   });
 
   await incrementMetric(c.env.DB, sop.workspace_id, 'approvals_decided');
+
+  // Notify SOP owner of the decision
+  const sopDetail = await c.env.DB.prepare('SELECT title, owner_user_id FROM sops WHERE id = ?')
+    .bind(approval.sop_id)
+    .first<{ title: string; owner_user_id: string }>();
+
+  if (sopDetail) {
+    const ownerUser = await c.env.DB.prepare('SELECT telegram_user_id FROM users WHERE id = ?')
+      .bind(sopDetail.owner_user_id)
+      .first<{ telegram_user_id: number }>();
+
+    if (ownerUser?.telegram_user_id) {
+      const emoji = parsed.decision === 'APPROVED' ? '✅' : '❌';
+      const text = `${emoji} Your SOP "${sopDetail.title}" has been ${parsed.decision.toLowerCase()}.${parsed.comment ? `\n\nComment: ${parsed.comment}` : ''}`;
+
+      await fetch(`https://api.telegram.org/bot${c.env.BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: ownerUser.telegram_user_id,
+          text,
+        }),
+      }).catch((err) => console.error('Failed to notify SOP owner:', err));
+    }
+  }
 
   return c.json({
     id: approvalId,

@@ -3,11 +3,7 @@ import type { AppEnv } from '../app.js';
 import { getAuth } from '../middleware/auth.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { assertPermission } from '../services/rbac.js';
-import {
-  getBillingInfo,
-  updatePlan,
-  addCredits,
-} from '../services/billing.js';
+import { getBillingInfo, updatePlan, addCredits } from '../services/billing.js';
 import {
   recordPaymentEvent,
   isPaymentProcessed,
@@ -58,13 +54,14 @@ billingRoutes.post('/stars/webhook', async (c) => {
   const expectedSecret = c.env.BOT_WEBHOOK_SECRET;
   if (expectedSecret) {
     if (!secretToken || secretToken !== expectedSecret) {
-      return c.json(
-        { error: { code: 'UNAUTHORIZED', message: 'Invalid webhook secret' } },
-        401,
-      );
+      return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid webhook secret' } }, 401);
     }
   } else {
-    console.warn('BOT_WEBHOOK_SECRET not set — Stars webhook source not verified');
+    // Reject when secret is not configured — prevents webhook spoofing in misconfigured deployments
+    return c.json(
+      { error: { code: 'SERVER_ERROR', message: 'Webhook secret not configured' } },
+      500,
+    );
   }
 
   const body = await c.req.json();
@@ -96,8 +93,7 @@ billingRoutes.post('/stars/webhook', async (c) => {
   }
 
   const workspaceId =
-    payloadData.workspaceId ??
-    (await resolveWorkspaceForUser(c.env.DB, body.message?.from?.id));
+    payloadData.workspaceId ?? (await resolveWorkspaceForUser(c.env.DB, body.message?.from?.id));
 
   if (!workspaceId) {
     console.error('Stars webhook: could not resolve workspace');
@@ -139,14 +135,21 @@ billingRoutes.post('/stars/webhook', async (c) => {
  */
 billingRoutes.post('/walletpay/webhook', async (c) => {
   if (!isFeatureEnabled(c.env, 'WALLETPAY')) {
-    return c.json({ error: { code: 'FEATURE_DISABLED', message: 'Wallet Pay is not enabled' } }, 501);
+    return c.json(
+      { error: { code: 'FEATURE_DISABLED', message: 'Wallet Pay is not enabled' } },
+      501,
+    );
   }
 
   const rawBody = await c.req.text();
   const signature = c.req.header('WalletPay-Signature') ?? '';
 
   if (c.env.WALLETPAY_WEBHOOK_SECRET) {
-    const valid = await validateWalletPaySignature(rawBody, signature, c.env.WALLETPAY_WEBHOOK_SECRET);
+    const valid = await validateWalletPaySignature(
+      rawBody,
+      signature,
+      c.env.WALLETPAY_WEBHOOK_SECRET,
+    );
     if (!valid) {
       return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid webhook signature' } }, 401);
     }
@@ -170,7 +173,10 @@ billingRoutes.post('/walletpay/webhook', async (c) => {
 
   const workspaceId = payloadMeta.workspaceId;
   if (!workspaceId) {
-    return c.json({ error: { code: 'BAD_REQUEST', message: 'Missing workspaceId in customData' } }, 400);
+    return c.json(
+      { error: { code: 'BAD_REQUEST', message: 'Missing workspaceId in customData' } },
+      400,
+    );
   }
 
   await recordPaymentEvent(c.env.DB, {
@@ -229,10 +235,7 @@ billingRoutes.post('/ton/confirm', async (c) => {
       }
       // In production, validate amount, destination address, etc.
     } catch {
-      return c.json(
-        { error: { code: 'VERIFICATION_FAILED', message: 'TON API error' } },
-        502,
-      );
+      return c.json({ error: { code: 'VERIFICATION_FAILED', message: 'TON API error' } }, 502);
     }
   } else {
     // Manual fallback mode — admin must confirm later

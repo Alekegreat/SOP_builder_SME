@@ -10,13 +10,10 @@ export function getAccessToken(): string | null {
   return accessToken;
 }
 
-async function request<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string> ?? {}),
+    ...((options.headers as Record<string, string>) ?? {}),
   };
 
   if (accessToken) {
@@ -44,21 +41,33 @@ async function request<T>(
 
 // ── Auth ──
 export function authenticateTelegram(initData: string) {
-  return request<{ accessToken: string; user: { id: string; name: string; telegramUserId: number }; workspaceId: string }>(
-    '/auth/telegram',
-    { method: 'POST', body: JSON.stringify({ initData }) },
-  );
+  return request<{
+    accessToken: string;
+    user: { id: string; name: string; telegramUserId: number };
+    workspaceId: string;
+  }>('/auth/telegram', { method: 'POST', body: JSON.stringify({ initData }) });
 }
 
 // ── SOPs ──
-export function listSops(params: { workspaceId: string; status?: string; search?: string; limit?: number; offset?: number }) {
+export function listSops(params: {
+  workspaceId: string;
+  status?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}) {
   const qs = new URLSearchParams();
   qs.set('workspaceId', params.workspaceId);
   if (params.status) qs.set('status', params.status);
   if (params.search) qs.set('search', params.search);
   if (params.limit) qs.set('limit', String(params.limit));
   if (params.offset) qs.set('offset', String(params.offset));
-  return request<{ data: Record<string, unknown>[]; total: number; limit?: number; offset?: number }>(`/sops?${qs}`);
+  return request<{
+    data: Record<string, unknown>[];
+    total: number;
+    limit?: number;
+    offset?: number;
+  }>(`/sops?${qs}`);
 }
 
 export function getSop(id: string) {
@@ -79,13 +88,19 @@ export function startInterview(sopId: string) {
 }
 
 export function answerInterview(sopId: string, data: { questionKey: string; answer: string }) {
-  return request<{ nextQuestion: unknown; isComplete: boolean }>(`/sops/${sopId}/interview/answer`, {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
+  return request<{ nextQuestion: unknown; isComplete: boolean }>(
+    `/sops/${sopId}/interview/answer`,
+    {
+      method: 'POST',
+      body: JSON.stringify(data),
+    },
+  );
 }
 
-export function generateSop(sopId: string, data?: { isDelta?: boolean; previousVersionId?: string }) {
+export function generateSop(
+  sopId: string,
+  data?: { isDelta?: boolean; previousVersionId?: string },
+) {
   return request<{ status: string; sessionId: string }>(`/sops/${sopId}/generate`, {
     method: 'POST',
     body: JSON.stringify(data ?? {}),
@@ -104,7 +119,9 @@ export function publishVersion(sopId: string, versionId: string) {
 
 // ── Approvals ──
 export function getApprovalInbox(workspaceId: string) {
-  return request<{ data: Record<string, unknown>[] }>(`/approvals/inbox?workspaceId=${workspaceId}`);
+  return request<{ data: Record<string, unknown>[] }>(
+    `/approvals/inbox?workspaceId=${workspaceId}`,
+  );
 }
 
 export function createApproval(data: { sopId: string; versionId: string; approverUserId: string }) {
@@ -114,7 +131,10 @@ export function createApproval(data: { sopId: string; versionId: string; approve
   });
 }
 
-export function decideApproval(approvalId: string, data: { decision: 'APPROVED' | 'REJECTED'; comment?: string }) {
+export function decideApproval(
+  approvalId: string,
+  data: { decision: 'APPROVED' | 'REJECTED'; comment?: string },
+) {
   return request<Record<string, unknown>>(`/approvals/${approvalId}/decide`, {
     method: 'POST',
     body: JSON.stringify(data),
@@ -152,21 +172,34 @@ export function getAuditLogs(params: { workspaceId: string; limit?: number; offs
 // ── Workspace ──
 export function getWorkspaceSettings(workspaceId: string) {
   return request<{
-    id: string; name: string; plan: string;
-    reviewCycleDays: number; strictApprovals: boolean; requireApprovalToPublish: boolean;
+    id: string;
+    name: string;
+    plan: string;
+    reviewCycleDays: number;
+    strictApprovals: boolean;
+    requireApprovalToPublish: boolean;
   }>(`/workspace/settings?workspaceId=${workspaceId}`);
 }
 
-export function updateWorkspaceSettings(workspaceId: string, data: {
-  name?: string; reviewCycleDays?: number; strictApprovals?: boolean; requireApprovalToPublish?: boolean;
-}) {
+export function updateWorkspaceSettings(
+  workspaceId: string,
+  data: {
+    name?: string;
+    reviewCycleDays?: number;
+    strictApprovals?: boolean;
+    requireApprovalToPublish?: boolean;
+  },
+) {
   return request<{ status: string }>('/workspace/settings', {
     method: 'PUT',
     body: JSON.stringify({ workspaceId, ...data }),
   });
 }
 
-export function updateAiConfig(workspaceId: string, data: { provider: string; model: string; apiKey?: string }) {
+export function updateAiConfig(
+  workspaceId: string,
+  data: { provider: string; model: string; apiKey?: string },
+) {
   return request<{ status: string }>('/workspace/ai-config', {
     method: 'PUT',
     body: JSON.stringify({ workspaceId, ...data }),
@@ -174,9 +207,9 @@ export function updateAiConfig(workspaceId: string, data: { provider: string; mo
 }
 
 export function getWorkspaceMembers(workspaceId: string) {
-  return request<{ data: Array<{ user_id: string; role: string; name: string; telegram_user_id: number }> }>(
-    `/workspace/members?workspaceId=${workspaceId}`,
-  );
+  return request<{
+    data: Array<{ user_id: string; role: string; name: string; telegram_user_id: number }>;
+  }>(`/workspace/members?workspaceId=${workspaceId}`);
 }
 
 export function inviteMember(workspaceId: string, data: { telegramUserId: number; role?: string }) {
@@ -203,4 +236,40 @@ export function exportSop(sopId: string, format: 'html' | 'pdf' = 'html') {
     method: 'POST',
     body: JSON.stringify({ format }),
   });
+}
+
+export function downloadExport(sopId: string, format: 'html' | 'pdf' = 'html'): string {
+  return `${API_BASE}/sops/${sopId}/export/download?format=${format}`;
+}
+
+// ── Templates ──
+export function listTemplates(category?: string) {
+  const qs = category ? `?category=${encodeURIComponent(category)}` : '';
+  return request<{
+    data: Array<{
+      id: string;
+      title: string;
+      description: string;
+      tags: string[];
+      category: string;
+    }>;
+  }>(`/templates${qs}`);
+}
+
+// ── Analytics ──
+export function getAnalytics(workspaceId: string) {
+  return request<{
+    totalSops: number;
+    statusBreakdown: Record<string, number>;
+    staleSops: number;
+    pendingApprovals: number;
+    credits: { included: number; bought: number; used: number; remaining: number } | null;
+    dailyMetrics: Array<{
+      date: string;
+      sopsCreated: number;
+      versionsCreated: number;
+      interviewsCompleted: number;
+      approvalsDecided: number;
+    }>;
+  }>(`/analytics?workspaceId=${workspaceId}`);
 }

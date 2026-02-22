@@ -1,4 +1,3 @@
-import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../stores/authStore.js';
 import { getApprovalInbox, decideApproval } from '../lib/api.js';
@@ -38,9 +37,7 @@ export function ApprovalsPage() {
           {data.data.map((approval: Record<string, unknown>) => (
             <div key={approval.id as string} className="bg-tg-secondary rounded-xl p-4">
               <h3 className="font-medium">{approval.sop_title as string}</h3>
-              <p className="text-xs text-tg-hint mb-3">
-                Version {approval.semver as string}
-              </p>
+              <p className="text-xs text-tg-hint mb-3">Version {approval.semver as string}</p>
               <div className="flex gap-2">
                 <button
                   onClick={() =>

@@ -51,21 +51,29 @@ describe('Health Check', () => {
 
 describe('Auth Routes', () => {
   it('POST /auth/telegram rejects empty body', async () => {
-    const res = await app.request('/auth/telegram', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    }, createTestEnv());
+    const res = await app.request(
+      '/auth/telegram',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      },
+      createTestEnv(),
+    );
 
     expect(res.status).toBeGreaterThanOrEqual(400);
   });
 
   it('POST /auth/telegram rejects invalid initData', async () => {
-    const res = await app.request('/auth/telegram', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ initData: 'invalid-data' }),
-    }, createTestEnv());
+    const res = await app.request(
+      '/auth/telegram',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: 'invalid-data' }),
+      },
+      createTestEnv(),
+    );
 
     expect(res.status).toBeGreaterThanOrEqual(400);
   });
@@ -78,18 +86,26 @@ describe('SOP Routes (Unauthenticated)', () => {
   });
 
   it('POST /sops returns 401 without auth header', async () => {
-    const res = await app.request('/sops', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'Test', workspaceId: 'ws-1' }),
-    }, createTestEnv());
+    const res = await app.request(
+      '/sops',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Test', workspaceId: 'ws-1' }),
+      },
+      createTestEnv(),
+    );
     expect(res.status).toBe(401);
   });
 
   it('DELETE /sops/some-id returns 401 without auth header', async () => {
-    const res = await app.request('/sops/some-id', {
-      method: 'DELETE',
-    }, createTestEnv());
+    const res = await app.request(
+      '/sops/some-id',
+      {
+        method: 'DELETE',
+      },
+      createTestEnv(),
+    );
     expect(res.status).toBe(401);
   });
 });
@@ -120,11 +136,15 @@ describe('Workspace Routes (Unauthenticated)', () => {
   });
 
   it('POST /workspace/members/invite returns 401 without auth', async () => {
-    const res = await app.request('/workspace/members/invite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegramUserId: 123 }),
-    }, createTestEnv());
+    const res = await app.request(
+      '/workspace/members/invite',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegramUserId: 123 }),
+      },
+      createTestEnv(),
+    );
     expect(res.status).toBe(401);
   });
 });
@@ -145,13 +165,17 @@ describe('404 Handling', () => {
 
 describe('CORS Headers', () => {
   it('responds with CORS headers on preflight', async () => {
-    const res = await app.request('/health', {
-      method: 'OPTIONS',
-      headers: {
-        'Origin': 'https://example.com',
-        'Access-Control-Request-Method': 'GET',
+    const res = await app.request(
+      '/health',
+      {
+        method: 'OPTIONS',
+        headers: {
+          Origin: 'https://example.com',
+          'Access-Control-Request-Method': 'GET',
+        },
       },
-    }, createTestEnv());
+      createTestEnv(),
+    );
 
     // Hono CORS middleware returns 204 for preflight
     expect([200, 204]).toContain(res.status);
@@ -161,14 +185,63 @@ describe('CORS Headers', () => {
 });
 
 describe('Billing Routes (Webhook — No Auth)', () => {
-  it('POST /billing/stars/webhook rejects invalid update', async () => {
-    const res = await app.request('/billing/stars/webhook', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ not_a_valid_update: true }),
-    }, createTestEnv());
+  it('POST /billing/stars/webhook returns 500 when secret not configured', async () => {
+    const res = await app.request(
+      '/billing/stars/webhook',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ not_a_valid_update: true }),
+      },
+      createTestEnv(),
+    );
 
-    // Should either reject (400/403) or succeed with no-op
-    expect(res.status).toBeLessThan(500);
+    // Secret not configured → rejects with 500
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error.code).toBe('SERVER_ERROR');
+  });
+
+  it('POST /billing/stars/webhook rejects invalid secret', async () => {
+    const env = createTestEnv();
+    (env as Record<string, unknown>).BOT_WEBHOOK_SECRET = 'test-webhook-secret';
+
+    const res = await app.request(
+      '/billing/stars/webhook',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Telegram-Bot-Api-Secret-Token': 'wrong-secret',
+        },
+        body: JSON.stringify({ not_a_valid_update: true }),
+      },
+      env,
+    );
+
+    expect(res.status).toBe(401);
+  });
+
+  it('POST /billing/stars/webhook accepts valid secret with no-op update', async () => {
+    const env = createTestEnv();
+    (env as Record<string, unknown>).BOT_WEBHOOK_SECRET = 'test-webhook-secret';
+
+    const res = await app.request(
+      '/billing/stars/webhook',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Telegram-Bot-Api-Secret-Token': 'test-webhook-secret',
+        },
+        body: JSON.stringify({ not_a_valid_update: true }),
+      },
+      env,
+    );
+
+    // Valid secret, no payment → ok
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
   });
 });

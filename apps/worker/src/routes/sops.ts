@@ -5,13 +5,14 @@ import { assertPermission } from '../services/rbac.js';
 import { checkRateLimit } from '../services/rate-limiter.js';
 import { writeAuditLog } from '../services/audit.js';
 import { incrementMetric, hasCredits } from '../services/billing.js';
-import { CreateSopSchema, SopListQuerySchema, InterviewAnswerSchema, ENTITLEMENTS } from '@sop/shared';
-import type { WorkspaceRole, Plan } from '@sop/shared';
 import {
-  createInterviewState,
-  startInterview,
-  answerQuestion,
-} from '@sop/engine';
+  CreateSopSchema,
+  SopListQuerySchema,
+  InterviewAnswerSchema,
+  ENTITLEMENTS,
+} from '@sop/shared';
+import type { WorkspaceRole, Plan } from '@sop/shared';
+import { createInterviewState, startInterview, answerQuestion } from '@sop/engine';
 
 export const sopRoutes = new Hono<AppEnv>();
 
@@ -44,14 +45,17 @@ sopRoutes.post('/', async (c) => {
   const entitlements = ENTITLEMENTS[plan];
 
   if (entitlements.maxSops !== -1) {
-    const count = await c.env.DB.prepare(
-      'SELECT COUNT(*) as cnt FROM sops WHERE workspace_id = ?',
-    )
+    const count = await c.env.DB.prepare('SELECT COUNT(*) as cnt FROM sops WHERE workspace_id = ?')
       .bind(parsed.workspaceId)
       .first<{ cnt: number }>();
     if ((count?.cnt ?? 0) >= entitlements.maxSops) {
       return c.json(
-        { error: { code: 'LIMIT_EXCEEDED', message: `Plan limit: max ${entitlements.maxSops} SOPs` } },
+        {
+          error: {
+            code: 'LIMIT_EXCEEDED',
+            message: `Plan limit: max ${entitlements.maxSops} SOPs`,
+          },
+        },
         403,
       );
     }
@@ -78,17 +82,20 @@ sopRoutes.post('/', async (c) => {
 
   await incrementMetric(c.env.DB, parsed.workspaceId, 'sops_created');
 
-  return c.json({
-    id,
-    workspaceId: parsed.workspaceId,
-    title: parsed.title,
-    status: 'DRAFT',
-    ownerUserId: auth.userId,
-    currentVersionId: null,
-    nextReviewAt: null,
-    tagsJson: parsed.tags,
-    createdAt: now,
-  }, 201);
+  return c.json(
+    {
+      id,
+      workspaceId: parsed.workspaceId,
+      title: parsed.title,
+      status: 'DRAFT',
+      ownerUserId: auth.userId,
+      currentVersionId: null,
+      nextReviewAt: null,
+      tagsJson: parsed.tags,
+      createdAt: now,
+    },
+    201,
+  );
 });
 
 /**
@@ -120,7 +127,7 @@ sopRoutes.get('/', async (c) => {
     params.push(`%${query.search}%`);
   }
   if (query.tag) {
-    where += " AND tags_json LIKE ?";
+    where += ' AND tags_json LIKE ?';
     params.push(`%"${query.tag}"%`);
   }
 
@@ -135,10 +142,11 @@ sopRoutes.get('/', async (c) => {
     .all();
 
   return c.json({
-    data: sops.results?.map((s: Record<string, unknown>) => ({
-      ...s,
-      tagsJson: JSON.parse((s.tags_json as string) || '[]'),
-    })) ?? [],
+    data:
+      sops.results?.map((s: Record<string, unknown>) => ({
+        ...s,
+        tagsJson: JSON.parse((s.tags_json as string) || '[]'),
+      })) ?? [],
     total: countResult?.total ?? 0,
     limit: query.limit,
     offset: query.offset,
@@ -152,9 +160,7 @@ sopRoutes.get('/:id', async (c) => {
   const auth = getAuth(c);
   const id = c.req.param('id');
 
-  const sop = await c.env.DB.prepare('SELECT * FROM sops WHERE id = ?')
-    .bind(id)
-    .first();
+  const sop = await c.env.DB.prepare('SELECT * FROM sops WHERE id = ?').bind(id).first();
   if (!sop) {
     return c.json({ error: { code: 'NOT_FOUND', message: 'SOP not found' } }, 404);
   }
@@ -175,9 +181,7 @@ sopRoutes.post('/:id/interview/start', async (c) => {
   const auth = getAuth(c);
   const sopId = c.req.param('id');
 
-  const sop = await c.env.DB.prepare('SELECT * FROM sops WHERE id = ?')
-    .bind(sopId)
-    .first();
+  const sop = await c.env.DB.prepare('SELECT * FROM sops WHERE id = ?').bind(sopId).first();
   if (!sop) return c.json({ error: { code: 'NOT_FOUND', message: 'SOP not found' } }, 404);
 
   const role = await getMembership(c.env.DB, sop.workspace_id as string, auth.userId);
@@ -217,10 +221,13 @@ sopRoutes.post('/:id/interview/start', async (c) => {
     meta: { sopId },
   });
 
-  return c.json({
-    sessionId,
-    nextQuestion: result.nextQuestion,
-  }, 201);
+  return c.json(
+    {
+      sessionId,
+      nextQuestion: result.nextQuestion,
+    },
+    201,
+  );
 });
 
 /**
@@ -259,10 +266,7 @@ sopRoutes.post('/:id/interview/answer', async (c) => {
     }>();
 
   if (!session) {
-    return c.json(
-      { error: { code: 'NOT_FOUND', message: 'No active interview session' } },
-      404,
-    );
+    return c.json({ error: { code: 'NOT_FOUND', message: 'No active interview session' } }, 404);
   }
 
   // Reconstruct FSM state
@@ -319,12 +323,13 @@ sopRoutes.post('/:id/generate', async (c) => {
   // Rate limit generation
   const rateResult = await checkRateLimit(c.env.DB, auth.userId, 'generation');
   if (!rateResult.allowed) {
-    return c.json({ error: { code: 'RATE_LIMITED', message: 'Too many generation requests' } }, 429);
+    return c.json(
+      { error: { code: 'RATE_LIMITED', message: 'Too many generation requests' } },
+      429,
+    );
   }
 
-  const sop = await c.env.DB.prepare('SELECT * FROM sops WHERE id = ?')
-    .bind(sopId)
-    .first();
+  const sop = await c.env.DB.prepare('SELECT * FROM sops WHERE id = ?').bind(sopId).first();
   if (!sop) return c.json({ error: { code: 'NOT_FOUND', message: 'SOP not found' } }, 404);
 
   const workspaceId = sop.workspace_id as string;
@@ -346,7 +351,9 @@ sopRoutes.post('/:id/generate', async (c) => {
   }
 
   // Check credits
-  const workspace = await c.env.DB.prepare('SELECT plan, ai_config_json FROM workspaces WHERE id = ?')
+  const workspace = await c.env.DB.prepare(
+    'SELECT plan, ai_config_json FROM workspaces WHERE id = ?',
+  )
     .bind(workspaceId)
     .first<{ plan: string; ai_config_json: string | null }>();
 
@@ -356,14 +363,22 @@ sopRoutes.post('/:id/generate', async (c) => {
     const credits = await hasCredits(c.env.DB, workspaceId);
     if (!credits) {
       return c.json(
-        { error: { code: 'CREDITS_EXHAUSTED', message: 'No AI credits remaining. Purchase more or use BYO key.' } },
+        {
+          error: {
+            code: 'CREDITS_EXHAUSTED',
+            message: 'No AI credits remaining. Purchase more or use BYO key.',
+          },
+        },
         402,
       );
     }
   }
 
   // Idempotency: check if already enqueued for this session
-  const body = await c.req.json().catch(() => ({})) as { isDelta?: boolean; previousVersionId?: string };
+  const body = (await c.req.json().catch(() => ({}))) as {
+    isDelta?: boolean;
+    previousVersionId?: string;
+  };
 
   const dedup = await c.env.DB.prepare(
     `SELECT id FROM audit_logs
@@ -437,10 +452,11 @@ sopRoutes.get('/:id/versions', async (c) => {
     .all();
 
   return c.json({
-    data: versions.results?.map((v: Record<string, unknown>) => ({
-      ...v,
-      contentJson: JSON.parse((v.content_json as string) || '{}'),
-    })) ?? [],
+    data:
+      versions.results?.map((v: Record<string, unknown>) => ({
+        ...v,
+        contentJson: JSON.parse((v.content_json as string) || '{}'),
+      })) ?? [],
   });
 });
 
@@ -452,9 +468,7 @@ sopRoutes.post('/:id/versions/:versionId/publish', async (c) => {
   const sopId = c.req.param('id');
   const versionId = c.req.param('versionId');
 
-  const sop = await c.env.DB.prepare('SELECT * FROM sops WHERE id = ?')
-    .bind(sopId)
-    .first();
+  const sop = await c.env.DB.prepare('SELECT * FROM sops WHERE id = ?').bind(sopId).first();
   if (!sop) return c.json({ error: { code: 'NOT_FOUND', message: 'SOP not found' } }, 404);
 
   const workspaceId = sop.workspace_id as string;
@@ -477,7 +491,12 @@ sopRoutes.post('/:id/versions/:versionId/publish', async (c) => {
 
     if (!approval) {
       return c.json(
-        { error: { code: 'FORBIDDEN', message: 'Approval required before publishing (strict mode)' } },
+        {
+          error: {
+            code: 'FORBIDDEN',
+            message: 'Approval required before publishing (strict mode)',
+          },
+        },
         403,
       );
     }
@@ -531,9 +550,7 @@ sopRoutes.delete('/:id', async (c) => {
     return c.json({ error: { code: 'CONFLICT', message: 'SOP is already archived' } }, 409);
   }
 
-  await c.env.DB.prepare("UPDATE sops SET status = 'ARCHIVED' WHERE id = ?")
-    .bind(sopId)
-    .run();
+  await c.env.DB.prepare("UPDATE sops SET status = 'ARCHIVED' WHERE id = ?").bind(sopId).run();
 
   await writeAuditLog(c.env.DB, {
     workspaceId: sop.workspace_id,
@@ -556,7 +573,10 @@ sopRoutes.post('/:id/export', async (c) => {
   const format = (body as { format?: string }).format ?? 'html';
 
   if (format !== 'html' && format !== 'pdf') {
-    return c.json({ error: { code: 'BAD_REQUEST', message: 'format must be "html" or "pdf"' } }, 400);
+    return c.json(
+      { error: { code: 'BAD_REQUEST', message: 'format must be "html" or "pdf"' } },
+      400,
+    );
   }
 
   const sop = await c.env.DB.prepare(
@@ -599,4 +619,63 @@ sopRoutes.post('/:id/export', async (c) => {
   });
 
   return c.json({ status: 'queued', sopId, format });
+});
+
+/**
+ * GET /sops/:id/export/download — Download the latest export from R2
+ */
+sopRoutes.get('/:id/export/download', async (c) => {
+  const auth = getAuth(c);
+  const sopId = c.req.param('id');
+  const format = (c.req.query('format') ?? 'html') as string;
+
+  if (format !== 'html' && format !== 'pdf') {
+    return c.json(
+      { error: { code: 'BAD_REQUEST', message: 'format must be "html" or "pdf"' } },
+      400,
+    );
+  }
+
+  const sop = await c.env.DB.prepare(
+    'SELECT workspace_id, current_version_id FROM sops WHERE id = ?',
+  )
+    .bind(sopId)
+    .first<{ workspace_id: string; current_version_id: string | null }>();
+
+  if (!sop) {
+    return c.json({ error: { code: 'NOT_FOUND', message: 'SOP not found' } }, 404);
+  }
+
+  const role = await getMembership(c.env.DB, sop.workspace_id, auth.userId);
+  assertPermission(role, 'export:create');
+
+  if (!sop.current_version_id) {
+    return c.json({ error: { code: 'BAD_REQUEST', message: 'SOP has no published version' } }, 400);
+  }
+
+  const extension = format === 'pdf' ? 'pdf' : 'html';
+  const key = `exports/${sop.workspace_id}/${sopId}/${sop.current_version_id}.${extension}`;
+  const object = await c.env.R2.get(key);
+
+  if (!object) {
+    return c.json(
+      {
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Export not found. Trigger export first via POST /sops/:id/export.',
+        },
+      },
+      404,
+    );
+  }
+
+  const contentType = format === 'pdf' ? 'application/pdf' : 'text/html';
+
+  return new Response(object.body, {
+    headers: {
+      'Content-Type': contentType,
+      'Content-Disposition': `attachment; filename="sop-${sopId}.${extension}"`,
+      'Cache-Control': 'private, max-age=3600',
+    },
+  });
 });

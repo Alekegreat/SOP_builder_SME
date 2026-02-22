@@ -54,7 +54,7 @@ describe('InterviewFSM', () => {
       expect(result.isComplete).toBe(false);
     });
 
-    it('allows skipping optional questions', () => {
+    it('allows skipping optional questions with empty string', () => {
       const state = createInterviewState(SESSION_ID, SOP_ID);
       let current = startInterview(state).newState;
 
@@ -64,11 +64,75 @@ describe('InterviewFSM', () => {
         if (!q.required) {
           const result = answerQuestion(current, q.key, '');
           expect(result.newState.currentQuestionIndex).toBe(i + 1);
+          // Skipped question should NOT be in transcript
+          expect(result.newState.transcript.find((t) => t.questionKey === q.key)).toBeUndefined();
           break;
         }
         const result = answerQuestion(current, q.key, `Answer ${i}`);
         current = result.newState;
       }
+    });
+
+    it('allows skipping optional questions with "skip" keyword', () => {
+      const state = createInterviewState(SESSION_ID, SOP_ID);
+      let current = startInterview(state).newState;
+
+      for (let i = 0; i < INTERVIEW_QUESTIONS.length; i++) {
+        const q = INTERVIEW_QUESTIONS[i];
+        if (!q.required) {
+          const result = answerQuestion(current, q.key, 'skip');
+          expect(result.newState.currentQuestionIndex).toBe(i + 1);
+          expect(result.newState.transcript.find((t) => t.questionKey === q.key)).toBeUndefined();
+          break;
+        }
+        current = answerQuestion(current, q.key, `Answer ${i}`).newState;
+      }
+    });
+
+    it('handles additional_steps question with "done" answer', () => {
+      const state = createInterviewState(SESSION_ID, SOP_ID);
+      let current = startInterview(state).newState;
+
+      for (let i = 0; i < INTERVIEW_QUESTIONS.length; i++) {
+        const q = INTERVIEW_QUESTIONS[i];
+        if (q.key === 'additional_steps') {
+          const result = answerQuestion(current, q.key, 'done');
+          // "done" should skip adding to transcript
+          expect(
+            result.newState.transcript.find((t) => t.questionKey === 'additional_steps'),
+          ).toBeUndefined();
+          break;
+        }
+        current = answerQuestion(current, q.key, `Answer for ${q.key}`).newState;
+      }
+    });
+
+    it('throws when answering in NOT_STARTED state', () => {
+      const state = createInterviewState(SESSION_ID, SOP_ID);
+      expect(() => answerQuestion(state, 'purpose', 'answer')).toThrow(
+        'Cannot answer in state: NOT_STARTED',
+      );
+    });
+
+    it('throws when answering in COMPLETED state', () => {
+      const state = createInterviewState(SESSION_ID, SOP_ID);
+      let current = startInterview(state).newState;
+      for (let i = 0; i < INTERVIEW_QUESTIONS.length; i++) {
+        current = answerQuestion(current, INTERVIEW_QUESTIONS[i].key, `a ${i}`).newState;
+      }
+      expect(current.state).toBe('COMPLETED');
+      expect(() => answerQuestion(current, 'purpose', 'answer')).toThrow(
+        'Cannot answer in state: COMPLETED',
+      );
+    });
+
+    it('throws when answering in CANCELLED state', () => {
+      const state = createInterviewState(SESSION_ID, SOP_ID);
+      const { newState } = startInterview(state);
+      const cancelled = cancelInterview(newState);
+      expect(() => answerQuestion(cancelled, 'purpose', 'answer')).toThrow(
+        'Cannot answer in state: CANCELLED',
+      );
     });
 
     it('completes interview when all questions answered', () => {
@@ -95,11 +159,37 @@ describe('InterviewFSM', () => {
   });
 
   describe('cancelInterview', () => {
-    it('transitions to CANCELLED', () => {
+    it('transitions to CANCELLED from IN_PROGRESS', () => {
       const state = createInterviewState(SESSION_ID, SOP_ID);
       const { newState } = startInterview(state);
       const cancelled = cancelInterview(newState);
       expect(cancelled.state).toBe('CANCELLED');
+    });
+
+    it('transitions to CANCELLED from NOT_STARTED', () => {
+      const state = createInterviewState(SESSION_ID, SOP_ID);
+      const cancelled = cancelInterview(state);
+      expect(cancelled.state).toBe('CANCELLED');
+    });
+
+    it('throws if already COMPLETED', () => {
+      const state = createInterviewState(SESSION_ID, SOP_ID);
+      let current = startInterview(state).newState;
+      for (let i = 0; i < INTERVIEW_QUESTIONS.length; i++) {
+        const q = INTERVIEW_QUESTIONS[i];
+        current = answerQuestion(current, q.key, `Answer ${i}`).newState;
+      }
+      expect(current.state).toBe('COMPLETED');
+      expect(() => cancelInterview(current)).toThrow('Cannot cancel interview in state: COMPLETED');
+    });
+
+    it('throws if already CANCELLED', () => {
+      const state = createInterviewState(SESSION_ID, SOP_ID);
+      const { newState } = startInterview(state);
+      const cancelled = cancelInterview(newState);
+      expect(() => cancelInterview(cancelled)).toThrow(
+        'Cannot cancel interview in state: CANCELLED',
+      );
     });
   });
 
@@ -118,6 +208,29 @@ describe('InterviewFSM', () => {
       const resumed = resumeInterview(current);
       expect(resumed.nextQuestion?.key).toBe(INTERVIEW_QUESTIONS[3].key);
     });
+
+    it('throws when resuming from NOT_STARTED', () => {
+      const state = createInterviewState(SESSION_ID, SOP_ID);
+      expect(() => resumeInterview(state)).toThrow('Cannot resume interview in state: NOT_STARTED');
+    });
+
+    it('throws when resuming from COMPLETED', () => {
+      const state = createInterviewState(SESSION_ID, SOP_ID);
+      let current = startInterview(state).newState;
+      for (let i = 0; i < INTERVIEW_QUESTIONS.length; i++) {
+        current = answerQuestion(current, INTERVIEW_QUESTIONS[i].key, `a ${i}`).newState;
+      }
+      expect(() => resumeInterview(current)).toThrow('Cannot resume interview in state: COMPLETED');
+    });
+
+    it('throws when resuming from CANCELLED', () => {
+      const state = createInterviewState(SESSION_ID, SOP_ID);
+      const { newState } = startInterview(state);
+      const cancelled = cancelInterview(newState);
+      expect(() => resumeInterview(cancelled)).toThrow(
+        'Cannot resume interview in state: CANCELLED',
+      );
+    });
   });
 
   describe('getProgress', () => {
@@ -127,7 +240,10 @@ describe('InterviewFSM', () => {
 
       let current = startInterview(state).newState;
       const result = answerQuestion(current, INTERVIEW_QUESTIONS[0].key, 'answer');
-      expect(getProgress(result.newState).percentage).toBeCloseTo(1 / INTERVIEW_QUESTIONS.length * 100, 0);
+      expect(getProgress(result.newState).percentage).toBeCloseTo(
+        (1 / INTERVIEW_QUESTIONS.length) * 100,
+        0,
+      );
     });
   });
 

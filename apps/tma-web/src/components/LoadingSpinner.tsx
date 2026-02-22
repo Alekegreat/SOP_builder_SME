@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface LoadingSpinnerProps {
   fullScreen?: boolean;
   size?: 'sm' | 'md' | 'lg';
@@ -19,11 +17,7 @@ export function LoadingSpinner({ fullScreen, size = 'md' }: LoadingSpinnerProps)
   );
 
   if (fullScreen) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        {spinner}
-      </div>
-    );
+    return <div className="flex items-center justify-center min-h-screen">{spinner}</div>;
   }
 
   return <div className="flex items-center justify-center p-4">{spinner}</div>;

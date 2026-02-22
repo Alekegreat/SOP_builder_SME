@@ -144,10 +144,7 @@ export async function updatePlan(
   workspaceId: string,
   newPlan: Plan,
 ): Promise<void> {
-  await db
-    .prepare('UPDATE workspaces SET plan = ? WHERE id = ?')
-    .bind(newPlan, workspaceId)
-    .run();
+  await db.prepare('UPDATE workspaces SET plan = ? WHERE id = ?').bind(newPlan, workspaceId).run();
 
   // Ensure credits for new plan
   await ensureUsageCredits(db, workspaceId, newPlan);
@@ -159,12 +156,11 @@ export async function updatePlan(
  */
 const ALLOWED_METRICS = new Set([
   'sops_created',
-  'versions_generated',
+  'versions_created',
   'interviews_completed',
   'approvals_decided',
-  'exports_created',
-  'credits_consumed',
-  'api_calls',
+  'checklist_runs_completed',
+  'credits_used',
 ]);
 
 /**

@@ -1,32 +1,40 @@
-import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { listSops } from '../lib/api.js';
+import { getAnalytics } from '../lib/api.js';
 import { useAuthStore } from '../stores/authStore.js';
 
 export function AnalyticsPage() {
   const workspaceId = useAuthStore((s) => s.workspaceId);
-  const { data } = useQuery({
-    queryKey: ['analytics-sops', workspaceId],
-    queryFn: () => listSops({ workspaceId: workspaceId!, limit: 100 }),
+  const { data, isLoading } = useQuery({
+    queryKey: ['analytics', workspaceId],
+    queryFn: () => getAnalytics(workspaceId!),
     enabled: !!workspaceId,
   });
 
-  const sops = (data?.data ?? []) as Array<Record<string, unknown>>;
-  const published = sops.filter((s) => s.status === 'PUBLISHED').length;
-  const stale = sops.filter((s) => {
-    const nextReviewAt = s.next_review_at as string | null;
-    return !!nextReviewAt && new Date(nextReviewAt).getTime() < Date.now();
-  }).length;
+  const totalSops = data?.totalSops ?? 0;
+  const published = data?.statusBreakdown?.PUBLISHED ?? 0;
+  const staleSops = data?.staleSops ?? 0;
+  const pendingApprovals = data?.pendingApprovals ?? 0;
+  const coverage = totalSops ? Math.round((published / totalSops) * 100) : 0;
 
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold mb-4">Analytics</h1>
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard label="Total SOPs" value={String(sops.length)} />
-        <StatCard label="Published" value={String(published)} />
-        <StatCard label="Stale" value={String(stale)} />
-        <StatCard label="Coverage" value={sops.length ? `${Math.round((published / sops.length) * 100)}%` : '0%'} />
-      </div>
+      {isLoading ? (
+        <p className="text-sm text-tg-hint">Loading analytics...</p>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard label="Total SOPs" value={String(totalSops)} />
+            <StatCard label="Published" value={String(published)} />
+            <StatCard label="Stale" value={String(staleSops)} />
+            <StatCard label="Coverage" value={`${coverage}%`} />
+            <StatCard label="Pending Approvals" value={String(pendingApprovals)} />
+            {data?.credits && (
+              <StatCard label="Credits Left" value={String(data.credits.remaining)} />
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

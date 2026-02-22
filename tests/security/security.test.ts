@@ -1,4 +1,3 @@
-
 import { describe, it, expect, vi } from 'vitest';
 import {
   hasPermission,
@@ -7,10 +6,7 @@ import {
   getRoleLevel,
   RBACError,
 } from '../../apps/worker/src/services/rbac.js';
-import {
-  encrypt,
-  decrypt,
-} from '../../apps/worker/src/services/encryption.js';
+import { encrypt, decrypt } from '../../apps/worker/src/services/encryption.js';
 import { validateInitData, createJwt, verifyJwt } from '../../apps/worker/src/services/auth.js';
 import { ENTITLEMENTS, RATE_LIMITS } from '../../packages/shared/src/constants.js';
 
@@ -86,10 +82,16 @@ describe('RBAC – Permission Enforcement', () => {
 
     // Exhaustive: every role vs every critical permission
     it('complete escalation matrix is correct', () => {
-      const dangerous = ['sop:delete', 'sop:publish', 'workspace:billing', 'admin:manual_payment', 'member:change_role'] as const;
-      expect(dangerous.every(p => hasPermission('viewer', p))).toBe(false);
-      expect(dangerous.every(p => hasPermission('approver', p))).toBe(false);
-      expect(dangerous.every(p => hasPermission('editor', p))).toBe(false);
+      const dangerous = [
+        'sop:delete',
+        'sop:publish',
+        'workspace:billing',
+        'admin:manual_payment',
+        'member:change_role',
+      ] as const;
+      expect(dangerous.every((p) => hasPermission('viewer', p))).toBe(false);
+      expect(dangerous.every((p) => hasPermission('approver', p))).toBe(false);
+      expect(dangerous.every((p) => hasPermission('editor', p))).toBe(false);
     });
   });
 
@@ -136,7 +138,7 @@ describe('RBAC – Permission Enforcement', () => {
   describe('getRoleLevel', () => {
     it('returns numeric levels in hierarchy order', () => {
       const roles = ['viewer', 'approver', 'editor', 'admin', 'owner'] as const;
-      const levels = roles.map(r => getRoleLevel(r));
+      const levels = roles.map((r) => getRoleLevel(r));
       for (let i = 1; i < levels.length; i++) {
         expect(levels[i]).toBeGreaterThan(levels[i - 1]);
       }
@@ -268,17 +270,28 @@ describe('Telegram initData Validation', () => {
     // Compute HMAC-SHA256 hash
     const encoder = new TextEncoder();
     const secretKey = await crypto.subtle.importKey(
-      'raw', encoder.encode('WebAppData'),
-      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+      'raw',
+      encoder.encode('WebAppData'),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign'],
     );
     const secretKeyData = await crypto.subtle.sign('HMAC', secretKey, encoder.encode(BOT_TOKEN));
     const validationKey = await crypto.subtle.importKey(
-      'raw', secretKeyData,
-      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+      'raw',
+      secretKeyData,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign'],
     );
-    const signature = await crypto.subtle.sign('HMAC', validationKey, encoder.encode(dataCheckString));
+    const signature = await crypto.subtle.sign(
+      'HMAC',
+      validationKey,
+      encoder.encode(dataCheckString),
+    );
     const hash = Array.from(new Uint8Array(signature))
-      .map(b => b.toString(16).padStart(2, '0')).join('');
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
 
     params.set('hash', hash);
     return params.toString();
@@ -302,7 +315,10 @@ describe('Telegram initData Validation', () => {
   it('rejects tampered hash', async () => {
     const initData = await createValidInitData();
     // Tamper with the hash
-    const tampered = initData.replace(/hash=[a-f0-9]+/, 'hash=0000000000000000000000000000000000000000000000000000000000000000');
+    const tampered = initData.replace(
+      /hash=[a-f0-9]+/,
+      'hash=0000000000000000000000000000000000000000000000000000000000000000',
+    );
     const result = await validateInitData(tampered, BOT_TOKEN);
     expect(result.valid).toBe(false);
   });
@@ -314,7 +330,10 @@ describe('Telegram initData Validation', () => {
   });
 
   it('rejects missing hash parameter', async () => {
-    const result = await validateInitData('auth_date=1234567890&user=%7B%22id%22%3A1%7D', BOT_TOKEN);
+    const result = await validateInitData(
+      'auth_date=1234567890&user=%7B%22id%22%3A1%7D',
+      BOT_TOKEN,
+    );
     expect(result.valid).toBe(false);
   });
 
@@ -375,7 +394,9 @@ describe('JWT Security', () => {
     const parts = jwt.split('.');
     // Tamper payload
     const tamperedPayload = btoa(JSON.stringify({ sub: 'admin', tgId: 99999, name: 'Admin' }))
-      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
     const tampered = `${parts[0]}.${tamperedPayload}.${parts[2]}`;
     expect(await verifyJwt(tampered, SECRET)).toBeNull();
   });
@@ -419,8 +440,12 @@ describe('Entitlement Enforcement', () => {
 
   it('plan capabilities increase with tier', () => {
     expect(ENTITLEMENTS.TEAM.maxSops).toBeGreaterThan(ENTITLEMENTS.SOLO_PRO.maxSops);
-    expect(ENTITLEMENTS.TEAM.aiCreditsPerMonth).toBeGreaterThan(ENTITLEMENTS.SOLO_PRO.aiCreditsPerMonth);
-    expect(ENTITLEMENTS.BUSINESS.aiCreditsPerMonth).toBeGreaterThan(ENTITLEMENTS.TEAM.aiCreditsPerMonth);
+    expect(ENTITLEMENTS.TEAM.aiCreditsPerMonth).toBeGreaterThan(
+      ENTITLEMENTS.SOLO_PRO.aiCreditsPerMonth,
+    );
+    expect(ENTITLEMENTS.BUSINESS.aiCreditsPerMonth).toBeGreaterThan(
+      ENTITLEMENTS.TEAM.aiCreditsPerMonth,
+    );
   });
 });
 
@@ -446,6 +471,87 @@ describe('Rate Limit Configuration', () => {
   });
 });
 
+// ── 7b. Rate Limit — Functional Sliding Window Tests ──
+
+describe('Rate Limit — Functional Sliding Window', () => {
+  function createMockD1() {
+    let store: Record<string, { count: number; window_start: number }> = {};
+    return {
+      _store: store,
+      prepare: vi.fn().mockImplementation((sql: string) => ({
+        bind: vi.fn().mockImplementation((...args: unknown[]) => ({
+          first: vi.fn().mockImplementation(async () => {
+            const key = args[0] as string;
+            return store[key] ?? null;
+          }),
+          run: vi.fn().mockImplementation(async () => {
+            if (sql.includes('INSERT OR REPLACE')) {
+              const key = args[0] as string;
+              const windowStart = args[1] as number;
+              store[key] = { count: 1, window_start: windowStart };
+            } else if (sql.includes('UPDATE')) {
+              const key = args[0] as string;
+              if (store[key]) store[key].count += 1;
+            } else if (sql.includes('DELETE')) {
+              // cleanup
+              const threshold = args[0] as number;
+              for (const k of Object.keys(store)) {
+                if (store[k].window_start < threshold) delete store[k];
+              }
+            }
+          }),
+        })),
+      })),
+    } as unknown as D1Database;
+  }
+
+  it('allows first request', async () => {
+    const { checkRateLimit } = await import('../../apps/worker/src/services/rate-limiter.js');
+    const db = createMockD1();
+    const result = await checkRateLimit(db, 'user-1', 'generation');
+    expect(result.allowed).toBe(true);
+    expect(result.remaining).toBe(RATE_LIMITS.generation.maxPerMinute - 1);
+  });
+
+  it('blocks after threshold is reached', async () => {
+    const { checkRateLimit } = await import('../../apps/worker/src/services/rate-limiter.js');
+    const db = createMockD1();
+    const limit = RATE_LIMITS.generation.maxPerMinute; // 3
+
+    // Use up all the requests
+    for (let i = 0; i < limit; i++) {
+      const result = await checkRateLimit(db, 'user-flood', 'generation');
+      expect(result.allowed).toBe(true);
+    }
+
+    // Next request should be blocked
+    const blocked = await checkRateLimit(db, 'user-flood', 'generation');
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.remaining).toBe(0);
+  });
+
+  it('different users have independent limits', async () => {
+    const { checkRateLimit } = await import('../../apps/worker/src/services/rate-limiter.js');
+    const db = createMockD1();
+
+    // User A uses up all requests
+    for (let i = 0; i < RATE_LIMITS.generation.maxPerMinute; i++) {
+      await checkRateLimit(db, 'user-a', 'generation');
+    }
+
+    // User B should still be allowed
+    const result = await checkRateLimit(db, 'user-b', 'generation');
+    expect(result.allowed).toBe(true);
+  });
+
+  it('cleanup removes expired entries', async () => {
+    const { cleanupRateLimits } = await import('../../apps/worker/src/services/rate-limiter.js');
+    const db = createMockD1();
+    // Just verifies the function runs without error
+    await expect(cleanupRateLimits(db)).resolves.not.toThrow();
+  });
+});
+
 // ── 8. Metric SQL Injection Guard ──
 
 describe('Metric SQL Injection Guard', () => {
@@ -456,8 +562,12 @@ describe('Metric SQL Injection Guard', () => {
         bind: vi.fn().mockReturnValue({ run: vi.fn() }),
       }),
     };
-    await expect(incrementMetric(mockDb, 'ws-1', 'DROP TABLE users; --')).rejects.toThrow('Invalid metric name');
-    await expect(incrementMetric(mockDb, 'ws-1', 'evil_column')).rejects.toThrow('Invalid metric name');
+    await expect(incrementMetric(mockDb, 'ws-1', 'DROP TABLE users; --')).rejects.toThrow(
+      'Invalid metric name',
+    );
+    await expect(incrementMetric(mockDb, 'ws-1', 'evil_column')).rejects.toThrow(
+      'Invalid metric name',
+    );
   });
 
   it('accepts valid metric names', async () => {
@@ -469,5 +579,160 @@ describe('Metric SQL Injection Guard', () => {
     };
     await expect(incrementMetric(mockDb, 'ws-1', 'sops_created')).resolves.not.toThrow();
     await expect(incrementMetric(mockDb, 'ws-1', 'approvals_decided')).resolves.not.toThrow();
+  });
+});
+
+// ── 9. Data Integrity — Approval Workflow Enforcement ──
+
+describe('Data Integrity — Approval Workflow', () => {
+  function createMockApp() {
+    // Import the app to test publish endpoint with strict approvals
+    return import('../../apps/worker/src/app.js').then((m) => m.default);
+  }
+
+  function createEnvWithAuth() {
+    const runFn = vi.fn().mockResolvedValue({ meta: {} });
+    const mockDb = {
+      prepare: vi.fn().mockImplementation((sql: string) => ({
+        bind: vi.fn().mockImplementation((..._args: unknown[]) => {
+          // Return different results based on SQL query
+          if (sql.includes('FROM sops WHERE id')) {
+            return {
+              first: vi.fn().mockResolvedValue({
+                id: 'sop-1',
+                workspace_id: 'ws-1',
+                status: 'APPROVED',
+                title: 'Test SOP',
+                owner_user_id: 'user-1',
+                current_version_id: 'v-1',
+              }),
+              run: runFn,
+              all: vi.fn().mockResolvedValue({ results: [] }),
+            };
+          }
+          if (sql.includes('FROM memberships')) {
+            return {
+              first: vi.fn().mockResolvedValue({ role: 'admin' }),
+              run: runFn,
+            };
+          }
+          if (sql.includes('FROM workspaces')) {
+            return {
+              first: vi.fn().mockResolvedValue({
+                plan: 'TEAM',
+                policy_json: JSON.stringify({ strictApprovals: true }),
+              }),
+              run: runFn,
+            };
+          }
+          if (sql.includes('FROM approvals WHERE') && sql.includes('APPROVED')) {
+            // No approved approval → strict policy blocks publish
+            return {
+              first: vi.fn().mockResolvedValue(null),
+              run: runFn,
+            };
+          }
+          return {
+            first: vi.fn().mockResolvedValue(null),
+            run: runFn,
+            all: vi.fn().mockResolvedValue({ results: [] }),
+          };
+        }),
+      })),
+    };
+
+    return {
+      DB: mockDb,
+      BUCKET: { put: vi.fn(), get: vi.fn(), delete: vi.fn() },
+      QUEUE: { send: vi.fn() },
+      BOT_TOKEN: 'test:bot-token',
+      JWT_SECRET: 'test-jwt-secret-key-that-is-long-enough-32chars!!',
+      ENCRYPTION_KEY: '0'.repeat(64),
+      TELEGRAM_BOT_TOKEN: 'test:bot-token',
+      FEATURE_TON_VERIFICATION: 'false',
+      FEATURE_WALLETPAY: 'false',
+      FEATURE_PDF_EXPORT: 'false',
+    };
+  }
+
+  it('strict policy blocks publish without approved approval', async () => {
+    const app = await createMockApp();
+    const env = createEnvWithAuth();
+
+    // Create a valid JWT for the request
+    const { createJwt } = await import('../../apps/worker/src/services/auth.js');
+    const token = await createJwt({ sub: 'user-1', tgId: 12345, name: 'Admin' }, env.JWT_SECRET);
+
+    const res = await app.request(
+      '/sops/sop-1/versions/v-1/publish',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      },
+      env,
+    );
+
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error.message).toContain('Approval required');
+  });
+});
+
+// ── 10. Version Immutability (Structural) ──
+
+describe('Version Immutability — No Update Endpoint', () => {
+  it('sop_versions content cannot be modified via any route', async () => {
+    // Verify there is no PUT/PATCH endpoint for sop_versions
+    // by checking that attempting to PATCH a version returns 404
+    const app = (await import('../../apps/worker/src/app.js')).default;
+    const env = {
+      DB: {
+        prepare: vi
+          .fn()
+          .mockReturnValue({
+            bind: vi
+              .fn()
+              .mockReturnValue({
+                first: vi.fn().mockResolvedValue(null),
+                run: vi.fn(),
+                all: vi.fn().mockResolvedValue({ results: [] }),
+              }),
+          }),
+      },
+      BUCKET: { put: vi.fn(), get: vi.fn(), delete: vi.fn() },
+      QUEUE: { send: vi.fn() },
+      BOT_TOKEN: 'test:bot-token',
+      JWT_SECRET: 'test-jwt-secret-key-that-is-long-enough-32chars!!',
+      ENCRYPTION_KEY: '0'.repeat(64),
+    };
+
+    const { createJwt } = await import('../../apps/worker/src/services/auth.js');
+    const token = await createJwt({ sub: 'user-1', tgId: 12345, name: 'Test' }, env.JWT_SECRET);
+
+    // PUT/PATCH on versions should return 404 (no such route)
+    const putRes = await app.request(
+      '/sops/sop-1/versions/v-1',
+      {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: 'tampered' }),
+      },
+      env,
+    );
+    expect(putRes.status).toBe(404);
+
+    const patchRes = await app.request(
+      '/sops/sop-1/versions/v-1',
+      {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: 'tampered' }),
+      },
+      env,
+    );
+    expect(patchRes.status).toBe(404);
   });
 });

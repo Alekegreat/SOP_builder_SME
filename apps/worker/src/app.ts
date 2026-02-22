@@ -12,6 +12,8 @@ import { adminRoutes } from './routes/admin.js';
 import { checklistRoutes } from './routes/checklists.js';
 import { webhookRoute } from './routes/webhook.js';
 import { workspaceRoutes } from './routes/workspace.js';
+import { templateRoutes } from './routes/templates.js';
+import { analyticsRoutes } from './routes/analytics.js';
 
 export type AppEnv = {
   Bindings: Env;
@@ -23,12 +25,15 @@ export type AppEnv = {
 const app = new Hono<AppEnv>();
 
 // ── Global middleware ──
-app.use('*', cors({
-  origin: '*', // TMA can be served from any Telegram domain
-  allowHeaders: ['Content-Type', 'Authorization'],
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  maxAge: 86400,
-}));
+app.use(
+  '*',
+  cors({
+    origin: '*', // TMA can be served from any Telegram domain
+    allowHeaders: ['Content-Type', 'Authorization'],
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    maxAge: 86400,
+  }),
+);
 
 app.use('*', loggerMiddleware);
 app.onError(errorHandler);
@@ -42,12 +47,16 @@ app.route('/webhook', webhookRoute);
 // ── Auth routes ──
 app.route('/auth', authRoutes);
 
+// ── Public routes (no auth) ──
+app.route('/templates', templateRoutes);
+
 // ── Protected routes ──
 app.use('/sops/*', authMiddleware);
 app.use('/approvals/*', authMiddleware);
 app.use('/admin/*', authMiddleware);
 app.use('/checklist_runs/*', authMiddleware);
 app.use('/workspace/*', authMiddleware);
+app.use('/analytics/*', authMiddleware);
 
 app.route('/sops', sopRoutes);
 app.route('/approvals', approvalRoutes);
@@ -55,10 +64,9 @@ app.route('/billing', billingRoutes);
 app.route('/admin', adminRoutes);
 app.route('/checklist_runs', checklistRoutes);
 app.route('/workspace', workspaceRoutes);
+app.route('/analytics', analyticsRoutes);
 
 // ── 404 ──
-app.notFound((c) =>
-  c.json({ error: { code: 'NOT_FOUND', message: 'Route not found' } }, 404),
-);
+app.notFound((c) => c.json({ error: { code: 'NOT_FOUND', message: 'Route not found' } }, 404));
 
 export default app;

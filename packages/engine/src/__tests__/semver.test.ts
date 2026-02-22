@@ -64,19 +64,99 @@ describe('Semver', () => {
 
   describe('determineBumpType', () => {
     it('returns major for scope changes', () => {
-      expect(determineBumpType({ scopeChanged: true, purposeChanged: false, rolesChanged: false, stepsChanged: 0, stepsTotal: 10 })).toBe('major');
+      expect(
+        determineBumpType({
+          scopeChanged: true,
+          purposeChanged: false,
+          rolesChanged: false,
+          stepsChanged: 0,
+          stepsTotal: 10,
+        }),
+      ).toBe('major');
     });
 
     it('returns major for purpose changes', () => {
-      expect(determineBumpType({ scopeChanged: false, purposeChanged: true, rolesChanged: false, stepsChanged: 0, stepsTotal: 10 })).toBe('major');
+      expect(
+        determineBumpType({
+          scopeChanged: false,
+          purposeChanged: true,
+          rolesChanged: false,
+          stepsChanged: 0,
+          stepsTotal: 10,
+        }),
+      ).toBe('major');
+    });
+
+    it('returns major for roles changes', () => {
+      expect(
+        determineBumpType({
+          scopeChanged: false,
+          purposeChanged: false,
+          rolesChanged: true,
+          stepsChanged: 0,
+          stepsTotal: 10,
+        }),
+      ).toBe('major');
     });
 
     it('returns major for >50% step changes', () => {
-      expect(determineBumpType({ scopeChanged: false, purposeChanged: false, rolesChanged: false, stepsChanged: 6, stepsTotal: 10 })).toBe('major');
+      expect(
+        determineBumpType({
+          scopeChanged: false,
+          purposeChanged: false,
+          rolesChanged: false,
+          stepsChanged: 6,
+          stepsTotal: 10,
+        }),
+      ).toBe('major');
+    });
+
+    it('returns minor for exactly 50% step changes', () => {
+      expect(
+        determineBumpType({
+          scopeChanged: false,
+          purposeChanged: false,
+          rolesChanged: false,
+          stepsChanged: 5,
+          stepsTotal: 10,
+        }),
+      ).toBe('minor');
     });
 
     it('returns minor for small changes', () => {
-      expect(determineBumpType({ scopeChanged: false, purposeChanged: false, rolesChanged: false, stepsChanged: 1, stepsTotal: 10 })).toBe('minor');
+      expect(
+        determineBumpType({
+          scopeChanged: false,
+          purposeChanged: false,
+          rolesChanged: false,
+          stepsChanged: 1,
+          stepsTotal: 10,
+        }),
+      ).toBe('minor');
+    });
+
+    it('returns minor when stepsTotal is 0', () => {
+      expect(
+        determineBumpType({
+          scopeChanged: false,
+          purposeChanged: false,
+          rolesChanged: false,
+          stepsChanged: 0,
+          stepsTotal: 0,
+        }),
+      ).toBe('minor');
+    });
+
+    it('returns minor when no changes at all', () => {
+      expect(
+        determineBumpType({
+          scopeChanged: false,
+          purposeChanged: false,
+          rolesChanged: false,
+          stepsChanged: 0,
+          stepsTotal: 5,
+        }),
+      ).toBe('minor');
     });
   });
 });

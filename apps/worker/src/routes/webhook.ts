@@ -84,6 +84,8 @@ async function handleTelegramUpdate(update: TelegramUpdate, env: import('../env.
     await handleApproveCommand(chatId, userId, env);
   } else if (text.startsWith('/billing')) {
     await handleBillingCommand(chatId, userId, env);
+  } else if (text.startsWith('/update_sop')) {
+    await handleUpdateSopCommand(chatId, userId, text, env);
   } else {
     // Check if user is in an interview session
     await handleInterviewMessage(chatId, userId, text, env);
@@ -96,36 +98,49 @@ async function handleStartCommand(
   from: { first_name: string },
   env: import('../env.js').Env,
 ) {
-  const webAppUrl = env.ENVIRONMENT === 'production'
-    ? 'https://sop-builder.pages.dev'
-    : 'https://sop-builder-dev.pages.dev';
+  const webAppUrl =
+    env.ENVIRONMENT === 'production'
+      ? 'https://sop-builder.pages.dev'
+      : 'https://sop-builder-dev.pages.dev';
 
-  await sendMessage(env.BOT_TOKEN, chatId, `👋 Welcome to SOP Builder, ${from.first_name}!
+  await sendMessage(
+    env.BOT_TOKEN,
+    chatId,
+    `👋 Welcome to SOP Builder, ${from.first_name}!
 
 I help you create Standard Operating Procedures through structured interviews.
 
 🔹 /new_sop — Start creating a new SOP
+🔹 /update_sop — Update an existing SOP
 🔹 /my_sops — View your SOPs
 🔹 /my_tasks — See pending approvals
 🔹 /billing — Manage your plan
 
-Or open the full app:`, {
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: '🚀 Open SOP Builder', web_app: { url: webAppUrl } }],
-      ],
+Or open the full app:`,
+    {
+      reply_markup: {
+        inline_keyboard: [[{ text: '🚀 Open SOP Builder', web_app: { url: webAppUrl } }]],
+      },
     },
-  });
+  );
 }
 
-async function handleNewSopCommand(chatId: number, telegramUserId: number, env: import('../env.js').Env) {
+async function handleNewSopCommand(
+  chatId: number,
+  telegramUserId: number,
+  env: import('../env.js').Env,
+) {
   // Find user and workspace
   const user = await env.DB.prepare('SELECT id FROM users WHERE telegram_user_id = ?')
     .bind(telegramUserId)
     .first<{ id: string }>();
 
   if (!user) {
-    await sendMessage(env.BOT_TOKEN, chatId, 'Please open the app first with /start to set up your account.');
+    await sendMessage(
+      env.BOT_TOKEN,
+      chatId,
+      'Please open the app first with /start to set up your account.',
+    );
     return;
   }
 
@@ -136,12 +151,18 @@ async function handleNewSopCommand(chatId: number, telegramUserId: number, env: 
     .first<{ workspace_id: string }>();
 
   if (!membership) {
-    await sendMessage(env.BOT_TOKEN, chatId, 'You need editor access to a workspace to create SOPs.');
+    await sendMessage(
+      env.BOT_TOKEN,
+      chatId,
+      'You need editor access to a workspace to create SOPs.',
+    );
     return;
   }
 
-  await sendMessage(env.BOT_TOKEN, chatId,
-    '📝 Let\'s create a new SOP!\n\nPlease send me a title for your SOP:',
+  await sendMessage(
+    env.BOT_TOKEN,
+    chatId,
+    "📝 Let's create a new SOP!\n\nPlease send me a title for your SOP:",
     {
       reply_markup: {
         force_reply: true,
@@ -152,7 +173,11 @@ async function handleNewSopCommand(chatId: number, telegramUserId: number, env: 
   );
 }
 
-async function handleMySopsCommand(chatId: number, telegramUserId: number, env: import('../env.js').Env) {
+async function handleMySopsCommand(
+  chatId: number,
+  telegramUserId: number,
+  env: import('../env.js').Env,
+) {
   const user = await env.DB.prepare('SELECT id FROM users WHERE telegram_user_id = ?')
     .bind(telegramUserId)
     .first<{ id: string }>();
@@ -185,7 +210,11 @@ async function handleMySopsCommand(chatId: number, telegramUserId: number, env: 
   await sendMessage(env.BOT_TOKEN, chatId, `📋 Your SOPs:\n\n${list}`, { parse_mode: 'Markdown' });
 }
 
-async function handleMyTasksCommand(chatId: number, telegramUserId: number, env: import('../env.js').Env) {
+async function handleMyTasksCommand(
+  chatId: number,
+  telegramUserId: number,
+  env: import('../env.js').Env,
+) {
   const user = await env.DB.prepare('SELECT id FROM users WHERE telegram_user_id = ?')
     .bind(telegramUserId)
     .first<{ id: string }>();
@@ -221,12 +250,104 @@ async function handleMyTasksCommand(chatId: number, telegramUserId: number, env:
   });
 }
 
-async function handleApproveCommand(chatId: number, telegramUserId: number, env: import('../env.js').Env) {
+async function handleApproveCommand(
+  chatId: number,
+  telegramUserId: number,
+  env: import('../env.js').Env,
+) {
   // Same as /my_tasks
   await handleMyTasksCommand(chatId, telegramUserId, env);
 }
 
-async function handleBillingCommand(chatId: number, telegramUserId: number, env: import('../env.js').Env) {
+async function handleUpdateSopCommand(
+  chatId: number,
+  telegramUserId: number,
+  text: string,
+  env: import('../env.js').Env,
+) {
+  const user = await env.DB.prepare('SELECT id FROM users WHERE telegram_user_id = ?')
+    .bind(telegramUserId)
+    .first<{ id: string }>();
+
+  if (!user) {
+    await sendMessage(env.BOT_TOKEN, chatId, 'Please /start first.');
+    return;
+  }
+
+  // Parse SOP selection from command: /update_sop <number>
+  const parts = text.trim().split(/\s+/);
+  const sopIndex = parts.length > 1 ? parseInt(parts[1], 10) : NaN;
+
+  // List SOPs for the user to pick from if no number given
+  const sops = await env.DB.prepare(
+    `SELECT s.id, s.title, s.status
+     FROM sops s
+     JOIN memberships m ON s.workspace_id = m.workspace_id
+     WHERE m.user_id = ? AND s.status IN ('PUBLISHED', 'APPROVED', 'DRAFT')
+     ORDER BY s.created_at DESC
+     LIMIT 10`,
+  )
+    .bind(user.id)
+    .all();
+
+  if (!sops.results?.length) {
+    await sendMessage(env.BOT_TOKEN, chatId, 'You have no SOPs to update. Use /new_sop first.');
+    return;
+  }
+
+  if (isNaN(sopIndex) || sopIndex < 1 || sopIndex > sops.results.length) {
+    const list = sops.results
+      .map((s: Record<string, unknown>, i: number) => `${i + 1}. ${s.title} — _${s.status}_`)
+      .join('\n');
+    await sendMessage(
+      env.BOT_TOKEN,
+      chatId,
+      `📝 Which SOP to update? Reply with:\n/update_sop <number>\n\n${list}`,
+      { parse_mode: 'Markdown' },
+    );
+    return;
+  }
+
+  const selectedSop = sops.results[sopIndex - 1];
+  const sopId = selectedSop.id as string;
+  const sopTitle = selectedSop.title as string;
+
+  // Find workspace
+  const sop = await env.DB.prepare('SELECT workspace_id FROM sops WHERE id = ?')
+    .bind(sopId)
+    .first<{ workspace_id: string }>();
+  if (!sop) {
+    await sendMessage(env.BOT_TOKEN, chatId, 'SOP not found.');
+    return;
+  }
+
+  // Create a new interview session for delta update
+  const sessionId = crypto.randomUUID();
+  const now = new Date().toISOString();
+
+  await env.DB.prepare(
+    `INSERT INTO interview_sessions (id, sop_id, workspace_id, state, transcript_json, current_question_index, created_by_user_id, created_at, updated_at)
+     VALUES (?, ?, ?, 'IN_PROGRESS', '[]', 0, ?, ?, ?)`,
+  )
+    .bind(sessionId, sopId, sop.workspace_id, user.id, now, now)
+    .run();
+
+  const { INTERVIEW_QUESTIONS } = await import('@sop/shared');
+  const firstQ = INTERVIEW_QUESTIONS[0];
+
+  await sendMessage(
+    env.BOT_TOKEN,
+    chatId,
+    `🔄 Starting delta update for: *${sopTitle}*\n\nAnswer the following questions. Your new answers will be used to generate an updated version.\n\n📝 *Question 1/${INTERVIEW_QUESTIONS.length}*\n\n${firstQ.question}`,
+    { parse_mode: 'Markdown' },
+  );
+}
+
+async function handleBillingCommand(
+  chatId: number,
+  telegramUserId: number,
+  env: import('../env.js').Env,
+) {
   const user = await env.DB.prepare('SELECT id FROM users WHERE telegram_user_id = ?')
     .bind(telegramUserId)
     .first<{ id: string }>();
@@ -251,7 +372,9 @@ async function handleBillingCommand(chatId: number, telegramUserId: number, env:
     .bind(membership.workspace_id)
     .first<{ plan: string }>();
 
-  await sendMessage(env.BOT_TOKEN, chatId,
+  await sendMessage(
+    env.BOT_TOKEN,
+    chatId,
     `💳 Current plan: *${workspace?.plan ?? 'FREE'}*\n\nUpgrade options:`,
     {
       parse_mode: 'Markdown',
@@ -297,7 +420,9 @@ async function handleInterviewMessage(
 
   // Handle cancel
   if (text.toLowerCase() === '/cancel') {
-    await env.DB.prepare("UPDATE interview_sessions SET state = 'CANCELLED', updated_at = ? WHERE id = ?")
+    await env.DB.prepare(
+      "UPDATE interview_sessions SET state = 'CANCELLED', updated_at = ? WHERE id = ?",
+    )
       .bind(new Date().toISOString(), session.id)
       .run();
     await sendMessage(env.BOT_TOKEN, chatId, '❌ Interview cancelled.');
@@ -306,7 +431,8 @@ async function handleInterviewMessage(
 
   // Save answer
   const transcript = JSON.parse((session.transcript_json as string) || '[]');
-  const isSkip = !currentQuestion.required && (text.toLowerCase().trim() === 'skip' || text.trim() === '');
+  const isSkip =
+    !currentQuestion.required && (text.toLowerCase().trim() === 'skip' || text.trim() === '');
   const isDone = currentQuestion.key === 'additional_steps' && text.toLowerCase().trim() === 'done';
 
   if (!isSkip && !isDone) {
@@ -337,9 +463,7 @@ async function handleInterviewMessage(
     .run();
 
   if (isComplete) {
-    await sendMessage(env.BOT_TOKEN, chatId,
-      '✅ Interview complete! Generating your SOP...',
-    );
+    await sendMessage(env.BOT_TOKEN, chatId, '✅ Interview complete! Generating your SOP...');
 
     // Enqueue generation
     await env.QUEUE.send({
@@ -353,7 +477,9 @@ async function handleInterviewMessage(
   } else {
     const nextQ = INTERVIEW_QUESTIONS[nextIndex];
     const skipHint = nextQ.required ? '' : '\n_(Type "skip" to skip this question)_';
-    await sendMessage(env.BOT_TOKEN, chatId,
+    await sendMessage(
+      env.BOT_TOKEN,
+      chatId,
       `📝 *Question ${nextIndex + 1}/${INTERVIEW_QUESTIONS.length}*\n\n${nextQ.question}${skipHint}`,
       { parse_mode: 'Markdown' },
     );
@@ -373,13 +499,13 @@ async function handleCallbackQuery(
     const decision = action === 'approve' ? 'APPROVED' : 'REJECTED';
 
     const now = new Date().toISOString();
-    await env.DB.prepare(
-      'UPDATE approvals SET state = ?, decided_at = ? WHERE id = ?',
-    )
+    await env.DB.prepare('UPDATE approvals SET state = ?, decided_at = ? WHERE id = ?')
       .bind(decision, now, approvalId)
       .run();
 
-    await sendMessage(env.BOT_TOKEN, chatId,
+    await sendMessage(
+      env.BOT_TOKEN,
+      chatId,
       `${decision === 'APPROVED' ? '✅' : '❌'} Approval ${decision.toLowerCase()}.`,
     );
   }
